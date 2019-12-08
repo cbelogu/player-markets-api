@@ -2,7 +2,7 @@ const express = require('express');
 const dataService = require('./src/data');
 const app = express();
 // export NODE_OPTIONS=--http-parser=legacy
-const PORT = 3001;
+const PORT = 5000;
 
 app.get('/', (req, res) => {
   res.send('all is well');
@@ -31,4 +31,4 @@ app.get('/event/:id/:name', (req, res) => {
 });
 
 /* eslint-disable no-console */
-app.listen(PORT, () => console.log(`listening on port ${PORT}`));
+app.listen(process.env.PORT || PORT, () => console.log(`listening on port ${PORT}`));
