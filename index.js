@@ -1,5 +1,5 @@
 const express = require('express');
-const dataService = require('./data');
+const dataService = require('./src/data');
 const app = express();
 // export NODE_OPTIONS=--http-parser=legacy
 const PORT = 3001;
