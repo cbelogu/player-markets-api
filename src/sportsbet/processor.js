@@ -4,6 +4,7 @@ const { NbaMatch } = require('./models/nbaMatch');
 const { PlayerMarket } = require('./models/playerMarket');
 const { getPlayerProps } = require('../beteasy/processor');
 const { getPlayerMarkets } = require('../ladbrokes/processor');
+const bet365 = require('../bet365/processor');
 const _ = require('lodash');
 
 function getMatches() {
@@ -30,7 +31,8 @@ function getPlayerMarket(eventId, eventName) {
   const sportsBetCall = get(`${config.SPORTSBET_BASE_URL}/Events/${eventId}/MarketGroupings/567/Markets`);
   const betEasyCall = getPlayerProps(eventName);
   const ladbrokesCall = getPlayerMarkets(eventName);
-  return all([sportsBetCall, betEasyCall, ladbrokesCall])
+  const bet365Call = bet365.getPlayerMarkets(eventName);
+  return all([sportsBetCall, betEasyCall, ladbrokesCall, bet365Call])
     .then((response) => {
       const markets = [];
 
@@ -51,7 +53,7 @@ function getPlayerMarket(eventId, eventName) {
         const prop = betEasyProps[index];
         let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
         if (finalProp) {
-          finalProp.betEasySelections = prop.selections;
+          finalProp.betEasySelections = prop;
         }
       }
 
@@ -59,11 +61,22 @@ function getPlayerMarket(eventId, eventName) {
       const ladbrokesResponse = response[2];
       for (let index = 0; index < ladbrokesResponse.length; index++) {
         const prop = ladbrokesResponse[index];
-        let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.name.toLowerCase());
+        let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
         if (finalProp) {
-          finalProp.ladbrokesSelections = prop.selections;
+          finalProp.ladbrokesSelections = prop;
         }
       }
+
+      // process bet365 Response
+      const bet365Response = response[3];
+      for (let index = 0; index < bet365Response.players.length; index++) {
+        const prop = bet365Response.players[index];
+        let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
+        if (finalProp) {
+          finalProp.bet365Selections = prop;
+        }
+      }
+
       // return final markets
       return markets;
     })

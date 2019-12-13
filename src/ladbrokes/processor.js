@@ -65,21 +65,24 @@ async function getPlayerMarkets(matchName) {
                 const market = data[index];
                 const props = market.trim().split('\n');
                 const playerName = props[0].split('Over')[0].trim();
-                const handicap = props[0].split('Over')[1].trim().replace(' Points', '').trim();
-                const selections = [];
-                selections.push({
-                    propName: 'Over',
-                    handicap: handicap,
-                    price: props[1].trim()
-                });
-                selections.push({
-                    propName: 'Under',
-                    handicap: handicap,
-                    price: props[3].trim()
-                });
+                const handiCap = props[0].split('Over')[1].trim().replace(' Points', '').trim();
+                // const selections = [];
+                // selections.push({
+                //     propName: 'Over',
+                //     handicap: handicap,
+                //     price: props[1].trim()
+                // });
+                // selections.push({
+                //     propName: 'Under',
+                //     handicap: handicap,
+                //     price: props[3].trim()
+                // });
                 const playerMarket = {
-                    name: playerName,
-                    selections: selections
+                    playerName,
+                    handiCap,
+                    overPrice: props[1].trim(),
+                    underPrice: props[3].trim()
+                    // selections: selections
                 };
                 playerMarkets.push(playerMarket);
             }
