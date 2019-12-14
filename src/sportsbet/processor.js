@@ -28,11 +28,19 @@ function getMatches() {
 }
 
 function getPlayerMarket(eventId, eventName) {
-  const sportsBetCall = get(`${config.SPORTSBET_BASE_URL}/Events/${eventId}/MarketGroupings/567/Markets`);
-  const betEasyCall = getPlayerProps(eventName);
-  const ladbrokesCall = getPlayerMarkets(eventName);
-  const bet365Call = bet365.getPlayerMarkets(eventName);
-  return all([sportsBetCall, betEasyCall, ladbrokesCall, bet365Call])
+  const requestPool = [
+    get(`${config.SPORTSBET_BASE_URL}/Events/${eventId}/MarketGroupings/567/Markets`), // sportsbet API
+    getPlayerProps(eventName), // bet easy API
+    getPlayerMarkets(eventName) // ladbrokes BROWSER
+  ];
+  return all(requestPool)
+    .then((response) => {
+      return bet365.getPlayerMarkets(eventName)
+        .then((data) => {
+          response.push(data);
+          return response;
+        })
+    })
     .then((response) => {
       const markets = [];
 

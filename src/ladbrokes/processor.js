@@ -18,7 +18,7 @@ async function getMatchUrl(matchName) {
     const formattedName = String(namesArray[1] + ' v ' + namesArray[0]).replace(/\s/g, '-').replace('76ers', '76-ers').toLowerCase();
     console.log(formattedName);
     return puppeteer
-        .launch({ headless: true })
+        .launch({args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             const cachedData = _cache.get(CACHEKEY_URLS);
             if (cachedData) {
@@ -74,7 +74,7 @@ async function getPlayerMarkets(matchName) {
     }
 
     return puppeteer
-        .launch({ headless: true })
+        .launch({args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, url, resolve, reject);

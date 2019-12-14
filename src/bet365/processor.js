@@ -56,7 +56,7 @@ async function getPlayerMarkets(matchName) {
 
     console.log('BET365 - NO DATA IN CACHE.... FETCHING FROM SERVER');
     return puppeteer
-        .launch({ headless: true })
+        .launch({args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, resolve, reject);

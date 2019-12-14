@@ -4,7 +4,7 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 // export NODE_OPTIONS=--http-parser=legacy
-const PORT = 5000;
+const PORT = 8080;
 
 app.get('/', (req, res) => {
   res.send('all is well');
