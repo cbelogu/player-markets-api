@@ -11,7 +11,7 @@ const cacheKey = 'Bet365Markets';
 const teamNameMappings = {
     'Atlanta Hawks': 'ATL Hawks',
     'Boston Celtics': 'BOS Celtics',
-    'Brooklyn Nets': 'BRO Nets',
+    'Brooklyn Nets': 'BKN Nets',
     'Charlotte Hornets': 'CHA Hornets',
     'Chicago Bulls': 'CHI Bulls',
     'Cleveland Cavaliers': 'CLE Cavaliers',
