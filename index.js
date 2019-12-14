@@ -1,6 +1,8 @@
 const express = require('express');
 const dataService = require('./src/data');
+const cors = require('cors');
 const app = express();
+app.use(cors());
 // export NODE_OPTIONS=--http-parser=legacy
 const PORT = 5000;
 
