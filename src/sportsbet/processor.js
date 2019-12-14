@@ -69,7 +69,8 @@ function getPlayerMarket(eventId, eventName) {
 
       // process bet365 Response
       const bet365Response = response[3];
-      for (let index = 0; index < bet365Response.players.length; index++) {
+      const bet365PlayersCount = (bet365Response && bet365Response.players) ? bet365Response.players.length : 0;
+      for (let index = 0; index < bet365PlayersCount; index++) {
         const prop = bet365Response.players[index];
         let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
         if (finalProp) {

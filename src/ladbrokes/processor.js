@@ -1,10 +1,13 @@
 const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iphoneX = devices['iPhone X'];
+const _cache = require('../client/cacheManager').cacheManager;
 
 const $ = require('cheerio');
 
 const url = 'https://www.ladbrokes.com.au/sports/basketball/usa/nba';
+const CACHEKEY_URLS = 'Ladbrokes_Match_Urls';
+const CACHEKEY_MATCH = 'Ladbrokes_Match_Markets_';
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -17,6 +20,11 @@ async function getMatchUrl(matchName) {
     return puppeteer
         .launch({ headless: true })
         .then((browser) => {
+            const cachedData = _cache.get(CACHEKEY_URLS);
+            if (cachedData) {
+                return Promise.resolve(cachedData.find((e) => e.includes(formattedName)));
+            }
+            console.log('LADBROKES urls not cached, fetching from server');
             return new Promise((resolve, reject) => {
                 extractUrls(browser, formattedName, resolve, reject);
             });
@@ -40,7 +48,9 @@ async function extractUrls(browser, formattedName, resolve, reject) {
             const element = links[index];
             urls.push(element.attribs.href);
         }
-        console.log(`urls are ${urls}`);
+        console.log(`CACHED Ladbrokes urls are ${urls}`);
+        const cacheSuccess = _cache.set(CACHEKEY_URLS, urls);
+        if (cacheSuccess) console.log('LADBROKES URLs cached successfully');
         await browser.close();
         return resolve(urls.find((e) => e.includes(formattedName)));
     } catch (error) {
@@ -50,8 +60,19 @@ async function extractUrls(browser, formattedName, resolve, reject) {
 
 async function getPlayerMarkets(matchName) {
     const path = await getMatchUrl(matchName);
+    if (!path) {
+        console.log('UNABLE to find url for ladbrokes match ' + matchName);
+        return Promise.resolve([]);
+    }
     const url = `https://www.ladbrokes.com.au${path}`;
     console.log(`final url is ${url}`);
+    const cacheKey = `${CACHEKEY_MATCH}${matchName}`.replace(' ', '-');
+    const cachedData = _cache.get(cacheKey);
+    if (cachedData) {
+        console.log('SERVING MATCH RESPONSE FROM CACHE - LADBROKES - ' + cacheKey);
+        return Promise.resolve(extractMarketsFromResponse(cachedData));
+    }
+
     return puppeteer
         .launch({ headless: true })
         .then((browser) => {
@@ -60,33 +81,9 @@ async function getPlayerMarkets(matchName) {
             });
         })
         .then((data) => {
-            const playerMarkets = [];
-            for (let index = 0; index < data.length; index++) {
-                const market = data[index];
-                const props = market.trim().split('\n');
-                const playerName = props[0].split('Over')[0].trim();
-                const handiCap = props[0].split('Over')[1].trim().replace(' Points', '').trim();
-                // const selections = [];
-                // selections.push({
-                //     propName: 'Over',
-                //     handicap: handicap,
-                //     price: props[1].trim()
-                // });
-                // selections.push({
-                //     propName: 'Under',
-                //     handicap: handicap,
-                //     price: props[3].trim()
-                // });
-                const playerMarket = {
-                    playerName,
-                    handiCap,
-                    overPrice: props[1].trim(),
-                    underPrice: props[3].trim()
-                    // selections: selections
-                };
-                playerMarkets.push(playerMarket);
-            }
-            return playerMarkets;
+            console.log('Caching Ladbrokes Match Data for ' + cacheKey);
+            _cache.set(cacheKey, data);
+            return extractMarketsFromResponse(data);
         })
         .catch((err) => {
             console.log(err);
@@ -94,7 +91,23 @@ async function getPlayerMarkets(matchName) {
         });
 }
 
-// console.log(getPlayerMarkets('Phoenix Suns At New Orleans Pelicans').then(console.log));
+function extractMarketsFromResponse(data) {
+    const playerMarkets = [];
+    for (let index = 0; index < data.length; index++) {
+        const market = data[index];
+        const props = market.trim().split('\n');
+        const playerName = props[0].split('Over')[0].trim();
+        const handiCap = props[0].split('Over')[1].trim().replace(' Points', '').trim();
+        const playerMarket = {
+            playerName,
+            handiCap,
+            overPrice: props[1].trim(),
+            underPrice: props[3].trim()
+        };
+        playerMarkets.push(playerMarket);
+    }
+    return playerMarkets;
+}
 
 async function extractMarkets(browser, url, resolve, reject) {
     try {

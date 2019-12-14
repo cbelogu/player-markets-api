@@ -1,10 +1,12 @@
 const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iphoneX = devices['iPhone X'];
+const _cache = require('../client/cacheManager').cacheManager;
 
 const $ = require('cheerio');
 
 const url = 'https://www.bet365.com.au/#/AC/B18/C20604387/D43/E181378/F43/';
+const cacheKey = 'Bet365Markets';
 
 const teamNameMappings = {
     'Atlanta Hawks': 'ATL Hawks',
@@ -46,6 +48,13 @@ function sleep(ms) {
 async function getPlayerMarkets(matchName) {
     const teams = matchName.split(' At ');
     matchName = teamNameMappings[teams[0]] + ' @ ' + teamNameMappings[teams[1]];
+    const cachedData = _cache.get(cacheKey);
+    if (cachedData) {
+        console.log('BET365 - READING DATA FROM CACHE, HURRAY');
+        return Promise.resolve(cachedData.find(match => match.matchName === matchName));
+    }
+
+    console.log('BET365 - NO DATA IN CACHE.... FETCHING FROM SERVER');
     return puppeteer
         .launch({ headless: true })
         .then((browser) => {
@@ -100,6 +109,11 @@ async function extractMarkets(browser, resolve, reject) {
 
             matches.push(match);
         }
+        // store the data in cache
+        console.log('BET365 Matches Array ' + JSON.stringify(matches));
+        console.log('BET365 - STORING DATA IN CACHE');
+        const success = _cache.set(cacheKey, matches);
+        if (success) console.log('BET365 - DATA STORED IN CACHE');
         return resolve(matches);
     } catch (error) {
         return reject(error);
