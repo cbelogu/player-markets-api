@@ -112,8 +112,10 @@ async function extractMarkets(browser, resolve, reject) {
         // store the data in cache
         console.log('BET365 Matches Array ' + JSON.stringify(matches));
         console.log('BET365 - STORING DATA IN CACHE');
-        const success = _cache.set(cacheKey, matches);
-        if (success) console.log('BET365 - DATA STORED IN CACHE');
+        if (matches.length > 0) {
+            const success = _cache.set(cacheKey, matches);
+            if (success) console.log('BET365 - DATA STORED IN CACHE');
+        }
         return resolve(matches);
     } catch (error) {
         return reject(error);
