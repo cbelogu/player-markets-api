@@ -18,7 +18,7 @@ async function getMatchUrl(matchName) {
     const formattedName = String(namesArray[1] + ' v ' + namesArray[0]).replace(/\s/g, '-').replace('76ers', '76-ers').toLowerCase();
     console.log(formattedName);
     return puppeteer
-        .launch({args: ['--no-sandbox', '--disable-setuid-sandbox']})
+        .launch({headless:false, args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             const cachedData = _cache.get(CACHEKEY_URLS);
             if (cachedData) {
@@ -40,7 +40,7 @@ async function extractUrls(browser, formattedName, resolve, reject) {
         const page = await browser.newPage();
         await page.emulate(iphoneX);
         await page.goto(url);
-        await sleep(2000);
+        await sleep(1000);
         const html = await page.content();
         const urls = [];
         const links = $('.sports-event-entry-with-markets > a', html);
@@ -74,7 +74,7 @@ async function getPlayerMarkets(matchName) {
     }
 
     return puppeteer
-        .launch({args: ['--no-sandbox', '--disable-setuid-sandbox']})
+        .launch({headless:false, args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, url, resolve, reject);

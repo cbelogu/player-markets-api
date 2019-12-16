@@ -55,7 +55,7 @@ function getPlayerProps(matchName) {
     return getEventIdFromName(matchName)
         .then((response) => {
             if (response === 0) {
-                return new Promise.resolve([]);
+                return Promise.resolve([]);
             } else {
                 const cacheKey = `${betEasyEventCacheKey}${response}`;
                 const cachedData = _cache.get(cacheKey);
