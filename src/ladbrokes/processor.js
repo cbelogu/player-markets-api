@@ -13,20 +13,22 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let _browser = undefined;
+
 async function getMatchUrl(matchName) {
     const namesArray = matchName.split(' At ');
     const formattedName = String(namesArray[1] + ' v ' + namesArray[0]).replace(/\s/g, '-').replace('76ers', '76-ers').toLowerCase();
     console.log(formattedName);
+    const cachedData = _cache.get(CACHEKEY_URLS);
+    if (cachedData) return Promise.resolve(cachedData.find((e) => e.includes(formattedName)));
+
     return puppeteer
-        .launch({headless:false, args: ['--no-sandbox', '--disable-setuid-sandbox']})
+        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
         .then((browser) => {
-            const cachedData = _cache.get(CACHEKEY_URLS);
-            if (cachedData) {
-                return Promise.resolve(cachedData.find((e) => e.includes(formattedName)));
-            }
+            _browser = browser;
             console.log('LADBROKES urls not cached, fetching from server');
             return new Promise((resolve, reject) => {
-                extractUrls(browser, formattedName, resolve, reject);
+                extractUrls(formattedName, resolve, reject);
             });
         })
         .then(result => result)
@@ -35,9 +37,9 @@ async function getMatchUrl(matchName) {
         });
 };
 
-async function extractUrls(browser, formattedName, resolve, reject) {
+async function extractUrls(formattedName, resolve, reject) {
     try {
-        const page = await browser.newPage();
+        const page = (await _browser.pages())[0];
         await page.emulate(iphoneX);
         await page.goto(url);
         await sleep(1000);
@@ -51,7 +53,6 @@ async function extractUrls(browser, formattedName, resolve, reject) {
         console.log(`CACHED Ladbrokes urls are ${urls}`);
         const cacheSuccess = _cache.set(CACHEKEY_URLS, urls);
         if (cacheSuccess) console.log('LADBROKES URLs cached successfully');
-        await browser.close();
         return resolve(urls.find((e) => e.includes(formattedName)));
     } catch (error) {
         return reject(error);
@@ -73,8 +74,10 @@ async function getPlayerMarkets(matchName) {
         return Promise.resolve(extractMarketsFromResponse(cachedData));
     }
 
-    return puppeteer
-        .launch({headless:false, args: ['--no-sandbox', '--disable-setuid-sandbox']})
+    const browser = _browser || await puppeteer
+        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+
+    return Promise.resolve(browser)
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, url, resolve, reject);
@@ -83,7 +86,11 @@ async function getPlayerMarkets(matchName) {
         .then((data) => {
             console.log('Caching Ladbrokes Match Data for ' + cacheKey);
             _cache.set(cacheKey, data);
-            return extractMarketsFromResponse(data);
+            const result = extractMarketsFromResponse(data);
+            return {
+                data: result,
+                browser
+            };
         })
         .catch((err) => {
             console.log(err);
@@ -111,7 +118,7 @@ function extractMarketsFromResponse(data) {
 
 async function extractMarkets(browser, url, resolve, reject) {
     try {
-        const page = await browser.newPage();
+        const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
         await page.goto(url);
         await sleep(1000);
@@ -142,6 +149,8 @@ async function extractMarkets(browser, url, resolve, reject) {
             }
             return data;
         });
+        await browser.close();
+        _browser = undefined;
         return resolve(data);
     } catch (error) {
         return reject(error);

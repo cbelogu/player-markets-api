@@ -56,7 +56,7 @@ async function getPlayerMarkets(matchName) {
 
     console.log('BET365 - NO DATA IN CACHE.... FETCHING FROM SERVER');
     return puppeteer
-        .launch({headless:false, args: ['--no-sandbox', '--disable-setuid-sandbox']})
+        .launch({headless:true, args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, resolve, reject);
@@ -75,7 +75,7 @@ async function getPlayerMarkets(matchName) {
 
 async function extractMarkets(browser, resolve, reject) {
     try {
-        const page = await browser.newPage();
+        const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
         await page.goto(url);
         await sleep(1000);
@@ -116,6 +116,7 @@ async function extractMarkets(browser, resolve, reject) {
             const success = _cache.set(cacheKey, matches);
             if (success) console.log('BET365 - DATA STORED IN CACHE');
         }
+        await browser.close();
         return resolve(matches);
     } catch (error) {
         return reject(error);
