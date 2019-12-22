@@ -5,8 +5,7 @@ const _cache = require('../client/cacheManager').cacheManager;
 const { config } = require('../config');
 const $ = require('cheerio');
 
-const cacheKey = 'Bet365Markets';
-
+let _cacheKey = '';
 const teamNameMappings = {
     'Atlanta Hawks': 'ATL Hawks',
     'Boston Celtics': 'BOS Celtics',
@@ -41,9 +40,10 @@ const teamNameMappings = {
 };
 
 async function getPlayerMarkets(matchName, marketType) {
+    _cacheKey = `${config.BET365.CACHEKEY}${marketType}`;
     const teams = matchName.split(' At ');
     matchName = teamNameMappings[teams[0]] + ' @ ' + teamNameMappings[teams[1]];
-    const cachedData = _cache.get(cacheKey);
+    const cachedData = _cache.get(_cacheKey);
     if (cachedData) {
         console.log('BET365 - READING DATA FROM CACHE, HURRAY');
         return Promise.resolve(cachedData.find(match => match.matchName === matchName));
@@ -87,7 +87,7 @@ async function extractMarkets(browser, marketType, resolve, reject) {
         await page.emulate(iphoneX);
         await page.goto(getUrl(marketType));
         const contentDivsSelector = 'div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div';
-        await page.waitForSelector(contentDivsSelector, { visible: true })
+        await page.waitForSelector(contentDivsSelector, { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT })
         const html = await page.content();
         const contentDivs = $(contentDivsSelector, html);
         const matches = [];
@@ -119,12 +119,12 @@ async function extractMarkets(browser, marketType, resolve, reject) {
             matches.push(match);
         }
         // store the data in cache
-        // console.log('BET365 Matches Array ' + JSON.stringify(matches));
-        // console.log('BET365 - STORING DATA IN CACHE');
-        // if (matches.length > 0) {
-        //     const success = _cache.set(cacheKey, matches);
-        //     if (success) console.log('BET365 - DATA STORED IN CACHE');
-        // }
+        console.log('BET365 Matches Array ' + JSON.stringify(matches));
+        console.log('BET365 - STORING DATA IN CACHE');
+        if (matches.length > 0) {
+            const success = _cache.set(_cacheKey, matches);
+            if (success) console.log('BET365 - DATA STORED IN CACHE');
+        }
         await browser.close();
         return resolve(matches);
     } catch (error) {

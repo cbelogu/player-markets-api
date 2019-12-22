@@ -3,7 +3,7 @@ const { config } = require('../config');
 const { NbaMatch } = require('./models/nbaMatch');
 
 function getMatches() {
-  return get(`${config.SPORTSBET_BASE_URL}/Competitions/${config.SPORTSBET_NBA_COMPETITION_ID}`)
+  return get(`${config.SPORTSBET.BASE_URL}/Competitions/${config.SPORTSBET.NBA_COMPETITION_ID}`)
     .then((response) => {
       const events = [];
       if (response.data && response.data.events.length > 0) {
@@ -27,15 +27,15 @@ const getSportsBetMarketUrlAndPropName = (eventId, marketType) => {
   let propName = '';
   switch (marketType) {
     case 1:
-      marketId = config.SPORTSBET_PLAYER_MARKET_ID;
+      marketId = config.SPORTSBET.PLAYER_MARKET_ID;
       propName = '- Points';
       break;
     case 2:
-      marketId = config.SPORTSBET_REBOUNDS_MARKET_ID;
+      marketId = config.SPORTSBET.REBOUNDS_MARKET_ID;
       propName = '- Rebounds';
       break;
     case 3:
-      marketId = config.SPORTSBET_ASSISTS_MARKET_ID;
+      marketId = config.SPORTSBET.ASSISTS_MARKET_ID;
       propName = '- Assists';
       break;
     default:
@@ -43,7 +43,7 @@ const getSportsBetMarketUrlAndPropName = (eventId, marketType) => {
   }
 
   return {
-    sportsBetUrl: `${config.SPORTSBET_BASE_URL}/Events/${eventId}/MarketGroupings/${marketId}/Markets`,
+    sportsBetUrl: `${config.SPORTSBET.BASE_URL}/Events/${eventId}/MarketGroupings/${marketId}/Markets`,
     marketName: propName,
   };
 }

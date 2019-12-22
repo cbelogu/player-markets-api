@@ -3,20 +3,20 @@ const { config } = require('../config');
 const _ = require('lodash');
 const PlayerProp = require('./models/playerProp').PlayerProp;
 const _cache = require('../client/cacheManager').cacheManager;
-const betEasyMatchesUrlKey = 'betEasyMatchesUrlKey';
-const betEasyEventCacheKey = 'betEasy_EventID_';
+
+let _betEasyEventCacheKey = '';
 
 function getEventIdFromName(matchName) {
-    const cachedResponse = _cache.get(betEasyMatchesUrlKey);
+    const cachedResponse = _cache.get(config.BETEASY.CACHEKEY_NBA_MATCHES_URL);
     if (cachedResponse) {
         console.log('betEasyMatchesUrls RETRIEVING FROM CACHE');
         return Promise.resolve(retrieveEventId(cachedResponse, matchName));
     }
-    return get(config.BETEASY_NBA_MATCHES_URL)
+    return get(config.BETEASY.NBA_MATCHES_URL)
         .then((response) => {
             // storing in cache
             console.log(`OUTPUTTING BET EASY RESP ${JSON.stringify(response.data)}`);
-            const success = _cache.set(betEasyMatchesUrlKey, { data: response.data });
+            const success = _cache.set(config.BETEASY.CACHEKEY_NBA_MATCHES_URL, { data: response.data });
             if (success) console.log('betEasyMatchesUrls saved successfully');
             return retrieveEventId(response, matchName);
         })
@@ -76,8 +76,8 @@ function getPlayerProps(matchName, marketType) {
             if (response === 0) {
                 return Promise.resolve([]);
             } else {
-                const cacheKey = `${betEasyEventCacheKey}${response}`;
-                const cachedData = _cache.get(cacheKey);
+                _betEasyEventCacheKey = `${config.BETEASY.CACHEKEY_EVENT}${response}_${marketType}`; // response is event id
+                const cachedData = _cache.get(_betEasyEventCacheKey);
                 if (cachedData) {
                     console.log('BETEASY Match Data serving from cache');
                     return Promise.resolve(retrievePlayerProps(cachedData, marketType));
@@ -87,8 +87,8 @@ function getPlayerProps(matchName, marketType) {
                 return get(uri)
                     .then((response) => {
                         console.log('BET EASY MATCH DATA CACHING');
-                        const cacheSuccess = _cache.set(cacheKey, { data: response.data });
-                        if (cacheSuccess) console.log('BET EASY MATCH DATA CACHED SUCCESSFULLY key - ' + cacheKey);
+                        const cacheSuccess = _cache.set(_betEasyEventCacheKey, { data: response.data });
+                        if (cacheSuccess) console.log('BET EASY MATCH DATA CACHED SUCCESSFULLY key - ' + _betEasyEventCacheKey);
                         return Promise.resolve(retrievePlayerProps(response, marketType));
                     })
                     .catch()
