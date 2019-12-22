@@ -4,7 +4,7 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 // export NODE_OPTIONS=--http-parser=legacy
-const PORT = 8080;
+const PORT = 1234;
 
 app.get('/', (req, res) => {
   res.send('all is well');
@@ -20,10 +20,10 @@ app.get('/events', (req, res) => {
     });
 });
 
-app.get('/event/:id/:name', (req, res) => {
-  const id = req.params.id;
-  const eventName = req.params.name;
-  dataService.getPlayerMarketsForEvent(id, eventName)
+app.get('/event/:id/:name/:betType', (req, res) => {
+  const { id, name } = req.params;
+  const marketType = parseInt(req.params.betType);
+  dataService.getPlayerMarketsForEvent(id, name, marketType)
     .then((data) => {
       res.send(data);
     })

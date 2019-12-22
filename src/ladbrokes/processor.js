@@ -2,16 +2,11 @@ const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iphoneX = devices['iPhone X'];
 const _cache = require('../client/cacheManager').cacheManager;
-
+const { config } = require('../config');
 const $ = require('cheerio');
 
-const url = 'https://www.ladbrokes.com.au/sports/basketball/usa/nba';
 const CACHEKEY_URLS = 'Ladbrokes_Match_Urls';
 const CACHEKEY_MATCH = 'Ladbrokes_Match_Markets_';
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 let _browser = undefined;
 
@@ -23,7 +18,7 @@ async function getMatchUrl(matchName) {
     if (cachedData) return Promise.resolve(cachedData.find((e) => e.includes(formattedName)));
 
     return puppeteer
-        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+        .launch({ headless: false, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
         .then((browser) => {
             _browser = browser;
             console.log('LADBROKES urls not cached, fetching from server');
@@ -41,8 +36,8 @@ async function extractUrls(formattedName, resolve, reject) {
     try {
         const page = (await _browser.pages())[0];
         await page.emulate(iphoneX);
-        await page.goto(url);
-        await sleep(1000);
+        await page.goto(config.LADBROKES.NBA_MATCHES_URL);
+        await page.waitForSelector('.sports-event-entry-with-markets > a', { visible: true });
         const html = await page.content();
         const urls = [];
         const links = $('.sports-event-entry-with-markets > a', html);
@@ -59,13 +54,27 @@ async function extractUrls(formattedName, resolve, reject) {
     }
 }
 
-async function getPlayerMarkets(matchName) {
+function getMarketParams(marketType) {
+    switch (marketType) {
+        case 1:
+            return { name: 'player point markets', propName: 'Player Points O/U' };
+        case 2:
+            return { name: 'player rebounds markets', propName: 'Player Rebounds O/U' };
+        case 3:
+            return { name: 'player assists markets', propName: 'Player Assists O/U' };
+        default:
+            throw new Error(`marketType should be 1 or 2 or 3. Invalid value passed: ${marketType}`);
+    }
+}
+
+async function getPlayerMarkets(matchName, marketType) {
+    // return Promise.resolve([]);
     const path = await getMatchUrl(matchName);
     if (!path) {
         console.log('UNABLE to find url for ladbrokes match ' + matchName);
         return Promise.resolve([]);
     }
-    const url = `https://www.ladbrokes.com.au${path}`;
+    const url = `${config.LADBROKES.BASE_URL}${path}`;
     console.log(`final url is ${url}`);
     const cacheKey = `${CACHEKEY_MATCH}${matchName}`.replace(' ', '-');
     const cachedData = _cache.get(cacheKey);
@@ -80,12 +89,12 @@ async function getPlayerMarkets(matchName) {
     return Promise.resolve(browser)
         .then((browser) => {
             return new Promise((resolve, reject) => {
-                extractMarkets(browser, url, resolve, reject);
+                extractMarkets(browser, url, marketType, resolve, reject);
             });
         })
         .then((data) => {
-            console.log('Caching Ladbrokes Match Data for ' + cacheKey);
-            _cache.set(cacheKey, data);
+            // console.log('Caching Ladbrokes Match Data for ' + cacheKey);
+            // _cache.set(cacheKey, data);
             const result = extractMarketsFromResponse(data);
             return {
                 data: result,
@@ -116,29 +125,33 @@ function extractMarketsFromResponse(data) {
     return playerMarkets;
 }
 
-async function extractMarkets(browser, url, resolve, reject) {
+async function extractMarkets(browser, url, marketType, resolve, reject) {
     try {
+        const { name, propName } = getMarketParams(marketType);
         const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
         await page.goto(url);
-        await sleep(1000);
-        page.waitForSelector('div.accordion__title.accordion-markets__title', { visible: true });
-        await page.$$eval('div.accordion__title.accordion-markets__title>h3>span', elements => {
-            let index = elements.findIndex(e => /player point markets/i.test(e.textContent));
+        const marketsSelector = 'div.accordion__title.accordion-markets__title>h3>span';
+        await page.waitForSelector(marketsSelector, { visible: true });
+        await page.$$eval(marketsSelector, (elements, _name) => {
+            console.log('lol....' + _name);
+            const reg = new RegExp(_name, 'i');
+            let index = elements.findIndex(e => reg.test(e.textContent));
             if (index !== -1) {
                 elements[index].click();
                 return;
             }
-        });
-        await page.$$eval('div.accordion__title.accordion-markets-nested__title.collapsed', elements => {
+        }, name);
+        await page.$$eval('div.accordion__title.accordion-markets-nested__title.collapsed', (elements, _propName) => {
+            console.log('meow...' + _propName);
             for (let index = 0; index < elements.length; index++) {
                 const element = elements[index];
-                if (element.textContent.includes('Player Points O/U')) {
+                if (element.textContent.includes(_propName)) {
                     element.click();
                     console.log(element.textContent);
                 }
             }
-        });
+        }, propName);
         let data = await page.$$eval('div.accordion__content.accordion-content-container.accordion-markets-nested__content.expanded', elements => {
             let data = [];
             for (let index = 0; index < elements.length; index++) {

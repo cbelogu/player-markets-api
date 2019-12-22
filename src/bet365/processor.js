@@ -2,10 +2,9 @@ const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iphoneX = devices['iPhone X'];
 const _cache = require('../client/cacheManager').cacheManager;
-
+const { config } = require('../config');
 const $ = require('cheerio');
 
-const url = 'https://www.bet365.com.au/#/AC/B18/C20604387/D43/E181378/F43/';
 const cacheKey = 'Bet365Markets';
 
 const teamNameMappings = {
@@ -41,11 +40,7 @@ const teamNameMappings = {
     'Washington Wizards': 'WAS Wizards'
 };
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function getPlayerMarkets(matchName) {
+async function getPlayerMarkets(matchName, marketType) {
     const teams = matchName.split(' At ');
     matchName = teamNameMappings[teams[0]] + ' @ ' + teamNameMappings[teams[1]];
     const cachedData = _cache.get(cacheKey);
@@ -59,7 +54,7 @@ async function getPlayerMarkets(matchName) {
         .launch({headless:true, args: ['--no-sandbox', '--disable-setuid-sandbox']})
         .then((browser) => {
             return new Promise((resolve, reject) => {
-                extractMarkets(browser, resolve, reject);
+                extractMarkets(browser, marketType, resolve, reject);
             });
         })
         .then((matches) => {
@@ -73,14 +68,28 @@ async function getPlayerMarkets(matchName) {
         });
 }
 
-async function extractMarkets(browser, resolve, reject) {
+function getUrl(marketType) {
+    switch (marketType) {
+        case 1:
+            return config.BET365.PLAYER_POINTS_URL;
+        case 2:
+            return config.BET365.PLAYER_REBOUNDS_URL;
+        case 3:
+            return config.BET365.PLAYER_ASSISTS_URL;
+        default:
+            throw new Error(`marketType should be 1 or 2 or 3. Invalid value passed: ${marketType}`);
+    }
+}
+
+async function extractMarkets(browser, marketType, resolve, reject) {
     try {
         const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
-        await page.goto(url);
-        await sleep(1000);
+        await page.goto(getUrl(marketType));
+        const contentDivsSelector = 'div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div';
+        await page.waitForSelector(contentDivsSelector, { visible: true })
         const html = await page.content();
-        const contentDivs = $('div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div', html);
+        const contentDivs = $(contentDivsSelector, html);
         const matches = [];
         for (let index = 0; index < contentDivs.length; index = index + 4) {
             const matchName = $('div.cm-MarketSubGroup_Label ', contentDivs[index]).text();
@@ -110,12 +119,12 @@ async function extractMarkets(browser, resolve, reject) {
             matches.push(match);
         }
         // store the data in cache
-        console.log('BET365 Matches Array ' + JSON.stringify(matches));
-        console.log('BET365 - STORING DATA IN CACHE');
-        if (matches.length > 0) {
-            const success = _cache.set(cacheKey, matches);
-            if (success) console.log('BET365 - DATA STORED IN CACHE');
-        }
+        // console.log('BET365 Matches Array ' + JSON.stringify(matches));
+        // console.log('BET365 - STORING DATA IN CACHE');
+        // if (matches.length > 0) {
+        //     const success = _cache.set(cacheKey, matches);
+        //     if (success) console.log('BET365 - DATA STORED IN CACHE');
+        // }
         await browser.close();
         return resolve(matches);
     } catch (error) {

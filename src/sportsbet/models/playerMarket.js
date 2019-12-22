@@ -1,7 +1,7 @@
 class PlayerMarket {
-    constructor(args) {
+    constructor(args, marketName) {
         this.id = args.id;
-        this.playerName = args.name.slice(0, args.name.length - 9);
+        this.playerName = args.name.slice(0, args.name.length - marketName.length).trim();
         this.sportsBetSelections = {
             playerName: this.playerName,
             handiCap: args.selections[0].unformattedHandicap,
