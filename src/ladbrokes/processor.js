@@ -1,11 +1,9 @@
-const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iphoneX = devices['iPhone X'];
 const _cache = require('../client/cacheManager').cacheManager;
 const { config } = require('../config');
 const $ = require('cheerio');
-
-let _browser = undefined;
+const { getBrowser } = require('../client/browser');
 
 async function getMatchUrl(matchName) {
     const namesArray = matchName.split(' At ');
@@ -14,13 +12,11 @@ async function getMatchUrl(matchName) {
     const cachedData = _cache.get(config.LADBROKES.CACHEKEY_NBA_MATCHES_URL);
     if (cachedData) return Promise.resolve(cachedData.find((e) => e.includes(formattedName)));
 
-    return puppeteer
-        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+    return getBrowser()
         .then((browser) => {
-            _browser = browser;
             console.log('LADBROKES urls not cached, fetching from server');
             return new Promise((resolve, reject) => {
-                extractUrls(formattedName, resolve, reject);
+                extractUrls(browser, formattedName, resolve, reject);
             });
         })
         .then(result => result)
@@ -29,9 +25,9 @@ async function getMatchUrl(matchName) {
         });
 };
 
-async function extractUrls(formattedName, resolve, reject) {
+async function extractUrls(browser, formattedName, resolve, reject) {
     try {
-        const page = (await _browser.pages())[0];
+        const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
         await page.goto(config.LADBROKES.NBA_MATCHES_URL);
         await page.waitForSelector('.sports-event-entry-with-markets > a', { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT });
@@ -79,10 +75,7 @@ async function getPlayerMarkets(matchName, marketType) {
         return Promise.resolve(extractMarketsFromResponse(cachedData, marketType));
     }
 
-    const browser = _browser || await puppeteer
-        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-
-    return Promise.resolve(browser)
+    return getBrowser()
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, url, marketType, resolve, reject);
@@ -157,8 +150,6 @@ async function extractMarkets(browser, url, marketType, resolve, reject) {
             }
             return data;
         }, type);
-        await browser.close();
-        _browser = undefined;
         return resolve(data);
     } catch (error) {
         return reject(error);

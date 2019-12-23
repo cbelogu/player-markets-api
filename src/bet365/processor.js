@@ -1,9 +1,9 @@
-const puppeteer = require('puppeteer');
 const devices = require('puppeteer/DeviceDescriptors');
 const iphoneX = devices['iPhone X'];
 const _cache = require('../client/cacheManager').cacheManager;
 const { config } = require('../config');
 const $ = require('cheerio');
+const { getBrowser } = require('../client/browser');
 
 let _cacheKey = '';
 const teamNameMappings = {
@@ -50,8 +50,7 @@ async function getPlayerMarkets(matchName, marketType) {
     }
 
     console.log('BET365 - NO DATA IN CACHE.... FETCHING FROM SERVER');
-    return puppeteer
-        .launch({headless:true, args: ['--no-sandbox', '--disable-setuid-sandbox']})
+    return getBrowser()
         .then((browser) => {
             return new Promise((resolve, reject) => {
                 extractMarkets(browser, marketType, resolve, reject);
@@ -125,7 +124,6 @@ async function extractMarkets(browser, marketType, resolve, reject) {
             const success = _cache.set(_cacheKey, matches);
             if (success) console.log('BET365 - DATA STORED IN CACHE');
         }
-        await browser.close();
         return resolve(matches);
     } catch (error) {
         return reject(error);

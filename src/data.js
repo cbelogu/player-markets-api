@@ -5,6 +5,7 @@ const { getPlayerProps } = require('./beteasy/processor');
 const { getPlayerMarkets } = require('./ladbrokes/processor');
 const bet365 = require('./bet365/processor');
 const _ = require('lodash');
+const { closeBrowser } = require('./client/browser');
 
 function getAvailableMatches() {
     return getMatches()
@@ -83,7 +84,9 @@ function getPlayerMarket(eventId, eventName, marketType) {
         return markets;
       })
       .catch()
-      .finally();
+      .finally(
+          closeBrowser
+      );
   }
 
 module.exports = {

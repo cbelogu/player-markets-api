@@ -28,7 +28,7 @@ const config = {
     CACHEKEY: 'Bet365Markets_',
   },
   BROWSER: {
-    WAIT_TIMEOUT: 5000,
+    WAIT_TIMEOUT: 10000,
   },
 };
 
