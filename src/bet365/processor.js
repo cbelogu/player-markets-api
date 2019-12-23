@@ -86,7 +86,10 @@ async function extractMarkets(browser, marketType, resolve, reject) {
         await page.emulate(iphoneX);
         await page.goto(getUrl(marketType));
         const contentDivsSelector = 'div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div';
-        await page.waitForSelector(contentDivsSelector, { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT })
+        const bettingSuspendedSelector = 'div.cl-BettingSuspendedScreen ';
+        await page.waitForSelector(`${contentDivsSelector}, ${bettingSuspendedSelector}`,
+            { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT })
+            .catch(console.log);
         const html = await page.content();
         const contentDivs = $(contentDivsSelector, html);
         const matches = [];
