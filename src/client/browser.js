@@ -7,7 +7,7 @@ function getBrowser() {
         return Promise.resolve(_browser);
     }
     return puppeteer
-        .launch({ headless: false, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
         .then((browser) => {
             _browser = browser;
             return browser;
