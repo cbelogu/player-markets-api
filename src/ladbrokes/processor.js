@@ -118,9 +118,12 @@ async function extractMarkets(browser, url, marketType, resolve, reject) {
         const { name, propName, type } = getMarketParams(marketType);
         const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
-        await page.goto(url);
+        await page.goto(url, {
+            timeout: config.BROWSER.WAIT_TIMEOUT,
+            waitUntil: ['domcontentloaded', 'networkidle2']
+        });
         const marketsSelector = 'div.accordion__title.accordion-markets__title>h3>span';
-        await page.waitForSelector(marketsSelector, { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT });
+        // await page.waitForSelector(marketsSelector, { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT });
         await page.$$eval(marketsSelector, (elements, _name) => {
             console.log('lol....' + _name);
             const reg = new RegExp(_name, 'i');
