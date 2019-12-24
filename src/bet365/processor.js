@@ -86,13 +86,9 @@ async function extractMarkets(browser, marketType, resolve, reject) {
         await page.emulate(iphoneX);
         await page.goto(getUrl(marketType), {
             timeout: config.BROWSER.WAIT_TIMEOUT,
-            waitUntil: ['domcontentloaded', 'networkidle2']
+            waitUntil: ['domcontentloaded', 'networkidle2', 'load']
         });
         const contentDivsSelector = 'div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div';
-        // const bettingSuspendedSelector = 'div.cl-BettingSuspendedScreen ';
-        // await page.waitForSelector(`${contentDivsSelector}, ${bettingSuspendedSelector}`,
-        //     { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT })
-        //     .catch(console.log);
         const html = await page.content();
         const contentDivs = $(contentDivsSelector, html);
         const matches = [];
@@ -125,8 +121,8 @@ async function extractMarkets(browser, marketType, resolve, reject) {
         }
         // store the data in cache
         console.log('BET365 Matches Array ' + JSON.stringify(matches));
-        console.log('BET365 - STORING DATA IN CACHE');
         if (matches.length > 0) {
+            console.log('BET365 - STORING DATA IN CACHE');
             const success = _cache.set(_cacheKey, matches);
             if (success) console.log('BET365 - DATA STORED IN CACHE');
         }

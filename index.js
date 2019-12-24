@@ -32,5 +32,20 @@ app.get('/event/:id/:name/:betType', (req, res) => {
     });
 });
 
+app.get('/events/bet365', (req, res) => {
+  dataService.cacheBet365Markets()
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send(JSON.stringify(err));
+    });
+});
+
+app.put('/events/flushCache', (req, res) => {
+  dataService.flushCache();
+  res.send();
+});
+
 /* eslint-disable no-console */
 app.listen(process.env.PORT || PORT, () => console.log(`listening on port ${PORT}`));

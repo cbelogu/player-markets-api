@@ -1,4 +1,4 @@
-const { get, all } = require('./client/httpClient');
+const { get } = require('./client/httpClient');
 const { getMatches, getSportsBetMarketUrlAndPropName } = require('./sportsbet/processor.js');
 const { PlayerMarket } = require('./sportsbet/models/playerMarket');
 const { getPlayerProps } = require('./beteasy/processor');
@@ -6,6 +6,7 @@ const { getPlayerMarkets } = require('./ladbrokes/processor');
 const bet365 = require('./bet365/processor');
 const _ = require('lodash');
 const { closeBrowser } = require('./client/browser');
+const _cache = require('./client/cacheManager').cacheManager;
 
 function getAvailableMatches() {
     return getMatches()
@@ -101,7 +102,27 @@ function getPlayerMarket(eventId, eventName, marketType) {
         });
 }
 
+function cacheBet365Markets() {
+    return bet365.getPlayerMarkets('na', 1)
+      .then(() => bet365.getPlayerMarkets('na', 2))
+      .then(() => bet365.getPlayerMarkets('eventName', 3))
+      .catch()
+      .finally(() => closeBrowser());
+}
+
+function flushCache() {
+    try {
+        console.log(`Before flush ... ${JSON.stringify(_cache.getStats())}`);
+        _cache.flushAll();
+        console.log(`After flush ... ${JSON.stringify(_cache.getStats())}`);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 module.exports = {
     getAvailableMatches,
-    getPlayerMarketsForEvent
+    getPlayerMarketsForEvent,
+    cacheBet365Markets,
+    flushCache
 }

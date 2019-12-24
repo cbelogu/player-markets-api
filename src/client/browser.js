@@ -8,7 +8,15 @@ function getBrowser() {
         return Promise.resolve(_browser);
     }
     return puppeteer
-        .launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+        .launch({
+            headless: true, args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--ignore-certificate-errors',
+                '--disable-infobars',
+                '--disable-gpu'
+            ]
+        })
         .then((browser) => {
             console.log('Returning browser new instance...');
             _browser = browser;
