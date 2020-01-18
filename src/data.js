@@ -91,7 +91,7 @@ function getPlayerMarket(eventId, eventName, marketType) {
                     finalProp.bet365Selections = prop;
                 }
             }
-
+            calculateValueProps(markets);
             // return final markets
             return markets;
         })
@@ -102,12 +102,39 @@ function getPlayerMarket(eventId, eventName, marketType) {
         });
 }
 
-function cacheBet365Markets() {
-    return bet365.getPlayerMarkets('na', 1)
-      .then(() => bet365.getPlayerMarkets('na', 2))
-      .then(() => bet365.getPlayerMarkets('eventName', 3))
-      .catch()
-      .finally(() => closeBrowser());
+function calculateValueProps(markets) {
+    try {
+        if (markets && markets.length > 0) {
+            for (let index = 0; index < markets.length; index++) {
+                const market = markets[index];
+                const handiCaps = [
+                    market.sportsBetSelections ? Number(market.sportsBetSelections.handiCap) : 0,
+                    market.betEasySelections ? Number(market.betEasySelections.handiCap) : 0,
+                    market.ladbrokesSelections ? Number(market.ladbrokesSelections.handiCap) : 0,
+                    market.bet365Selections ? Number(market.bet365Selections.handiCap) : 0,
+                ];
+                const unique = [... new Set(handiCaps.filter(n => n > 0).sort())];
+                console.log(`sorted unique handicaps.... ${unique}`);
+                if (unique.length > 1 && ((unique[unique.length - 1] - unique[0]) > 1)) {
+                    console.log(`setting value prop to true for ${market.playerName}`);
+                    market.valueProp = true;
+                }
+            }
+        }
+    } catch (error) {
+        return markets;
+    }
+}
+async function cacheBet365Markets() {
+    try {
+        await bet365.getPlayerMarkets('na', 1);
+        await bet365.getPlayerMarkets('na', 2);
+        await bet365.getPlayerMarkets('na', 3);
+        await closeBrowser();
+    } catch (error) {
+        console.log(error);
+    }
+    return Promise.resolve();
 }
 
 function flushCache() {

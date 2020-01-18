@@ -54,7 +54,7 @@ function getMarketParams(marketType) {
         case 2:
             return { name: 'player rebounds markets', propName: 'Player Rebounds O/U', type: 'Rebounds' };
         case 3:
-            return { name: 'player assists markets', propName: 'Player Assists O/U', type: 'Assists'  };
+            return { name: 'player assists markets', propName: 'Player Assists O/U', type: 'Assists' };
         default:
             throw new Error(`marketType should be 1 or 2 or 3. Invalid value passed: ${marketType}`);
     }
@@ -78,12 +78,12 @@ async function getPlayerMarkets(matchName, marketType) {
     return getBrowser()
         .then((browser) => {
             return new Promise((resolve, reject) => {
-                extractMarkets(browser, url, marketType, resolve, reject);
+                extractMarkets(browser, url, marketType, matchName, resolve, reject);
             });
         })
         .then((data) => {
-            console.log('Caching Ladbrokes Match Data for ' + cacheKey);
-            _cache.set(cacheKey, data);
+            // console.log('Caching Ladbrokes Match Data for ' + cacheKey);
+            // _cache.set(cacheKey, data);
             return extractMarketsFromResponse(data, marketType);
         })
         .catch((err) => {
@@ -95,6 +95,7 @@ async function getPlayerMarkets(matchName, marketType) {
 function extractMarketsFromResponse(data, marketType) {
     console.log(`Ladbrokes markets unformatted: ${JSON.stringify(data)}`);
     const playerMarkets = [];
+    if (!data) return playerMarkets;
     const { type } = getMarketParams(marketType);
     for (let index = 0; index < data.length; index++) {
         const market = data[index];
@@ -109,13 +110,12 @@ function extractMarketsFromResponse(data, marketType) {
         };
         playerMarkets.push(playerMarket);
     }
-    console.log(`Ladbrokes markets FORMATTED: ${JSON.stringify(playerMarkets)}`);
+    console.log(`Ladbrokes markets FORMATTED IS: ${JSON.stringify(playerMarkets)}`);
     return playerMarkets;
 }
 
-async function extractMarkets(browser, url, marketType, resolve, reject) {
+async function extractMarkets(browser, url, marketType, matchName, resolve, reject) {
     try {
-        const { name, propName, type } = getMarketParams(marketType);
         const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
         await page.goto(url, {
@@ -123,38 +123,46 @@ async function extractMarkets(browser, url, marketType, resolve, reject) {
             waitUntil: ['domcontentloaded', 'networkidle2']
         });
         const marketsSelector = 'div.accordion__title.accordion-markets__title>h3>span';
-        // await page.waitForSelector(marketsSelector, { visible: true, timeout: config.BROWSER.WAIT_TIMEOUT });
-        await page.$$eval(marketsSelector, (elements, _name) => {
-            console.log('lol....' + _name);
-            const reg = new RegExp(_name, 'i');
-            let index = elements.findIndex(e => reg.test(e.textContent));
-            if (index !== -1) {
-                elements[index].click();
-                return;
-            }
-        }, name);
-        await page.$$eval('div.accordion__title.accordion-markets-nested__title.collapsed', (elements, _propName) => {
-            console.log('meow...' + _propName);
-            for (let index = 0; index < elements.length; index++) {
-                const element = elements[index];
-                if (element.textContent.includes(_propName)) {
-                    element.click();
-                    console.log(element.textContent);
+
+        for (let propType = 1; propType <= 3; propType++) {
+            const { name, propName, type } = getMarketParams(propType);
+            await page.$$eval(marketsSelector, (elements, _name) => {
+                console.log('lol....' + _name);
+                const reg = new RegExp(_name, 'i');
+                let index = elements.findIndex(e => reg.test(e.textContent));
+                if (index !== -1) {
+                    elements[index].click();
+                    return;
                 }
-            }
-        }, propName);
-        let data = await page.$$eval('div.accordion__content.accordion-content-container.accordion-markets-nested__content.expanded', (elements, _type) => {
-            let data = [];
-            for (let index = 0; index < elements.length; index++) {
-                const text = elements[index].textContent;
-                if (text.includes('Over') && text.includes(_type)) {
-                    data.push(text);
+            }, name);
+            await page.$$eval('div.accordion__title.accordion-markets-nested__title.collapsed', (elements, _propName) => {
+                console.log('meow...' + _propName);
+                for (let index = 0; index < elements.length; index++) {
+                    const element = elements[index];
+                    if (element.textContent.includes(_propName)) {
+                        element.click();
+                        console.log(element.textContent);
+                    }
                 }
-            }
-            return data;
-        }, type);
-        return resolve(data);
+            }, propName);
+            let data = await page.$$eval('div.accordion__content.accordion-content-container.accordion-markets-nested__content.expanded', (elements, _type) => {
+                let data = [];
+                for (let index = 0; index < elements.length; index++) {
+                    const text = elements[index].textContent;
+                    if (text.includes('Over') && text.includes(_type)) {
+                        data.push(text);
+                    }
+                }
+                return data;
+            }, type);
+            const cacheKey = `${config.LADBROKES.CACHEKEY_MATCH}${matchName}_${propType}`.replace(' ', '-');
+            if (data.length > 0) _cache.set(cacheKey, data);
+        }
+        let cacheKey = `${config.LADBROKES.CACHEKEY_MATCH}${matchName}_${marketType}`.replace(' ', '-');
+        const cachedData = _cache.get(cacheKey);
+        return resolve(cachedData);
     } catch (error) {
+        console.log(`error while fetching requested ladbrokes markets... ${JSON.stringify(error)}`);
         return reject(error);
     }
 }

@@ -39,6 +39,12 @@ const teamNameMappings = {
     'Washington Wizards': 'WAS Wizards'
 };
 
+async function sleep(timeout = 500) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, timeout)
+    });
+}
+
 async function getPlayerMarkets(matchName, marketType) {
     _cacheKey = `${config.BET365.CACHEKEY}${marketType}`;
     const teams = matchName.split(' At ');
@@ -58,7 +64,7 @@ async function getPlayerMarkets(matchName, marketType) {
         })
         .then((matches) => {
             const data = matches.find(match => match.matchName === matchName);
-            console.log(JSON.stringify(data));
+            // console.log(`data to return in string format : ${JSON.stringify(matches)}`);
             return data;
         })
         .catch((err) => {
@@ -84,13 +90,38 @@ async function extractMarkets(browser, marketType, resolve, reject) {
     try {
         const page = (await browser.pages())[0];
         await page.emulate(iphoneX);
-        await page.goto(getUrl(marketType), {
+        const url = getUrl(marketType);
+        console.time(`navigating to url ${url}`);
+        await page.goto(url, {
             timeout: config.BROWSER.WAIT_TIMEOUT,
             waitUntil: ['domcontentloaded', 'networkidle2', 'load']
         });
+        console.timeEnd(`navigating to url ${url}`);
         const contentDivsSelector = 'div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div';
+        // const bettingSuspendedSelector = 'div.cl-BettingSuspendedScreen ';
+        console.time('starting wait...');
+        const waitOptions = { timeout: config.BROWSER.WAIT_TIMEOUT, visible: true };
+        try {
+            await page.waitForSelector(contentDivsSelector, waitOptions);
+        } catch (error) {
+            console.log(JSON.stringify(error));
+        }
+        let retryCount = 0;
+        let divsCount = 0;
+        while (retryCount < 3 && divsCount === 0) {
+            await sleep(250);
+            divsCount = await page.$$eval(contentDivsSelector, (elements) => {
+                return elements && elements.length;
+            });
+            retryCount++;
+        }
+        console.timeEnd('starting wait...');
+        console.log(`page returned ${divsCount} number of divs`);
+
         const html = await page.content();
+        // console.log(`page content retrieved successfully ... - ${html}`);
         const contentDivs = $(contentDivsSelector, html);
+        // console.log(`html for requested bet 365 page is ${contentDivs}`);
         const matches = [];
         for (let index = 0; index < contentDivs.length; index = index + 4) {
             const matchName = $('div.cm-MarketSubGroup_Label ', contentDivs[index]).text();
@@ -128,6 +159,7 @@ async function extractMarkets(browser, marketType, resolve, reject) {
         }
         return resolve(matches);
     } catch (error) {
+        console.log(`error while fetching bet 365 markets... ${JSON.stringify(error)}`);
         return reject(error);
     }
 }

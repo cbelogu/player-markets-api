@@ -47,5 +47,24 @@ app.put('/events/flushCache', (req, res) => {
   res.send();
 });
 
+app.put('/events/populateCache', (req, res) => {
+  try {
+    dataService.flushCache();
+    dataService.getAvailableMatches()
+      .then((data) => {
+        const dataCallsArray = data.map(match => {
+          dataService.getPlayerMarketsForEvent(match.id, match.name, 1)
+            .then(console.log('data populated successfully'))
+            .catch(console.log);
+        });
+
+        return dataCallsArray.reduce((p, c) => p.then(c));
+      })
+      .catch(console.log);
+    res.send(200);
+  } catch (error) {
+    res.status(500).send(JSON.stringify(error));
+  }
+});
 /* eslint-disable no-console */
 app.listen(process.env.PORT || PORT, () => console.log(`listening on port ${PORT}`));

@@ -76,7 +76,7 @@ function getPlayerProps(matchName, marketType) {
             if (response === 0) {
                 return Promise.resolve([]);
             } else {
-                _betEasyEventCacheKey = `${config.BETEASY.CACHEKEY_EVENT}${response}_${marketType}`; // response is event id
+                _betEasyEventCacheKey = `${config.BETEASY.CACHEKEY_EVENT}${response}`; // response is event id
                 const cachedData = _cache.get(_betEasyEventCacheKey);
                 if (cachedData) {
                     console.log('BETEASY Match Data serving from cache');
