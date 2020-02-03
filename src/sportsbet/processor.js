@@ -38,6 +38,10 @@ const getSportsBetMarketUrlAndPropName = (eventId, marketType) => {
       marketId = config.SPORTSBET.ASSISTS_MARKET_ID;
       propName = '- Assists';
       break;
+    case 4:
+      marketId = config.SPORTSBET.PRA_MARKET_ID;
+      propName = '- Pts + Reb + Ast';
+      break;
     default:
       throw new Error('Invalid Market Type, Should be 1 or 2 or 3. Passed in value is ' + marketType);
   }

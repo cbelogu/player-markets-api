@@ -34,14 +34,14 @@ function retrieveEventId(response, matchName) {
 }
 
 function retrievePlayerProps(response, marketType) {
-    const propName = getMarketName(marketType);
+    const { propName, id } = getMarketName(marketType);
     if (response.data && response.data.result
-        && response.data.result['18']
-        && response.data.result['18'].BettingType
-        && response.data.result['18'].BettingType.length > 0) {
+        && response.data.result[id]
+        && response.data.result[id].BettingType
+        && response.data.result[id].BettingType.length > 0) {
         const markets = [];
-        for (let index = 0; index < response.data.result['18'].BettingType.length; index++) {
-            const element = response.data.result['18'].BettingType[index];
+        for (let index = 0; index < response.data.result[id].BettingType.length; index++) {
+            const element = response.data.result[id].BettingType[index];
             if (element.EventName.endsWith(propName)) {
                 markets.push(new PlayerProp(element, propName));
             }
@@ -53,21 +53,36 @@ function retrievePlayerProps(response, marketType) {
 }
 
 function getMarketName(marketType) {
-    let propName = 0;
+    let params = 0;
     switch (marketType) {
         case 1:
-            propName = config.BETEASY.PLAYER_POINTS;
+            params = {
+                propName: config.BETEASY.PLAYER_POINTS,
+                id: '18'
+            };
             break;
         case 2:
-            propName = config.BETEASY.PLAYER_REBOUNDS;
+            params = {
+                propName: config.BETEASY.PLAYER_REBOUNDS,
+                id: '18'
+            };
             break;
         case 3:
-            propName = config.BETEASY.PLAYER_ASSISTS;
+            params = {
+                propName: config.BETEASY.PLAYER_ASSISTS,
+                id: '18'
+            };
+            break;
+        case 4:
+            params = {
+                propName: config.BETEASY.PLAYER_PRA,
+                id: '24'
+            };
             break;
         default:
             throw new Error(`Invalid Market Type, should be 1 or 2 or 3, passed in ${marketType}`);
     }
-    return propName;
+    return params;
 }
 
 function getPlayerProps(matchName, marketType) {
@@ -77,12 +92,14 @@ function getPlayerProps(matchName, marketType) {
                 return Promise.resolve([]);
             } else {
                 _betEasyEventCacheKey = `${config.BETEASY.CACHEKEY_EVENT}${response}`; // response is event id
+                if (marketType === 4) _betEasyEventCacheKey = _betEasyEventCacheKey + '_4'; // separate call for PRA
                 const cachedData = _cache.get(_betEasyEventCacheKey);
                 if (cachedData) {
                     console.log('BETEASY Match Data serving from cache');
                     return Promise.resolve(retrievePlayerProps(cachedData, marketType));
                 }
-                const uri = config.BETEASY.PLAYERPROP_URL.replace('{eventId}', response);
+                const { id } = getMarketName(marketType);
+                const uri = config.BETEASY.PLAYERPROP_URL.replace('{eventId}', response).replace('{marketId}', parseInt(id, 10));
                 console.log(`beteasy event prop url is : ${uri}`);
                 return get(uri)
                     .then((response) => {

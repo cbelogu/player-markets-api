@@ -4,6 +4,7 @@ const _cache = require('../client/cacheManager').cacheManager;
 const { config } = require('../config');
 const $ = require('cheerio');
 const { getBrowser } = require('../client/browser');
+const { get } = require('../client/httpClient');
 
 let _cacheKey = '';
 const teamNameMappings = {
@@ -46,6 +47,9 @@ async function sleep(timeout = 500) {
 }
 
 async function getPlayerMarkets(matchName, marketType) {
+    if (!config.BET365.ENABLE_BET365) {
+        return Promise.resolve([]);
+    }
     _cacheKey = `${config.BET365.CACHEKEY}${marketType}`;
     const teams = matchName.split(' At ');
     matchName = teamNameMappings[teams[0]] + ' @ ' + teamNameMappings[teams[1]];
@@ -56,34 +60,99 @@ async function getPlayerMarkets(matchName, marketType) {
     }
 
     console.log('BET365 - NO DATA IN CACHE.... FETCHING FROM SERVER');
-    return getBrowser()
-        .then((browser) => {
-            return new Promise((resolve, reject) => {
-                extractMarkets(browser, marketType, resolve, reject);
+
+    return config.BET365.USEAPICALL
+        ? getDataUsingApi(marketType)
+            .then((matches) => {
+                const data = matches.find(match => match.matchName === matchName);
+                // console.log(`data to return in string format : ${JSON.stringify(matches)}`);
+                return data;
+            })
+            .catch((err) => {
+                console.log(err);
+                // return reject(err);
+            })
+        : getBrowser()
+            .then((browser) => {
+                return new Promise((resolve, reject) => {
+                    extractMarkets(browser, marketType, resolve, reject);
+                });
+            })
+            .then((matches) => {
+                const data = matches.find(match => match.matchName === matchName);
+                // console.log(`data to return in string format : ${JSON.stringify(matches)}`);
+                return data;
+            })
+            .catch((err) => {
+                console.log(err);
+                // return reject(err);
             });
-        })
-        .then((matches) => {
-            const data = matches.find(match => match.matchName === matchName);
-            // console.log(`data to return in string format : ${JSON.stringify(matches)}`);
-            return data;
-        })
-        .catch((err) => {
-            console.log(err);
-            // return reject(err);
-        });
 }
 
-function getUrl(marketType) {
+function getUrl(marketType, useApiForData = false) {
     switch (marketType) {
         case 1:
-            return config.BET365.PLAYER_POINTS_URL;
+            return useApiForData ? config.BET365.API_PLAYER_POINTS_URL : config.BET365.PLAYER_POINTS_URL;
         case 2:
-            return config.BET365.PLAYER_REBOUNDS_URL;
+            return useApiForData ? config.BET365.API_PLAYER_REBOUNDS_URL : config.BET365.PLAYER_REBOUNDS_URL;
         case 3:
-            return config.BET365.PLAYER_ASSISTS_URL;
+            return useApiForData ? config.BET365.API_PLAYER_ASSISTS_URL : config.BET365.PLAYER_ASSISTS_URL;
+        case 4:
+            return useApiForData ? config.BET365.API_PLAYER_PRA : config.BET365.PLAYER_PRA;
         default:
             throw new Error(`marketType should be 1 or 2 or 3. Invalid value passed: ${marketType}`);
     }
+}
+
+async function getDataUsingApi(marketType) {
+    return get(getUrl(marketType, true),
+        {
+            headers:
+            {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
+                'Cookie': 'rmbs=3; aps03=cf=N&cg=1&cst=0&ct=13&hd=N&lng=30&oty=2&tzi=30; session=processform=0; pstk=915D9045DFA1F14385B74BFE5CC43E8C000003'
+            }
+        })
+        .then((response) => {
+            const matches = [];
+            const data = response.data.split('SY=cbn;NA=');
+            if (data && data.length && data.length === 1) {
+                console.log('markets not open yet');
+                return matches;
+            }
+            data.shift(); // removes the first element which is an array
+            for (let index = 0; index < data.length; index++) {
+                const matchData = data[index].split('CN=1;FF=;');
+                const matchName = matchData[0].split(';')[0];
+                const playersList = matchData[1].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
+                const overOdds = matchData[2].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
+
+                const match = {
+                    matchName,
+                    players: playersList.map((player, index) => ({
+                        playerName: player,
+                        handiCap: overOdds[index],
+                        overPrice: 1.00,
+                        underPrice: 1.00
+                    }))
+                };
+
+                matches.push(match);
+            }
+
+            // store the data in cache
+            console.log('BET365 Matches Array ' + JSON.stringify(matches));
+            if (matches.length > 0) {
+                console.log('BET365 - STORING DATA IN CACHE');
+                const success = _cache.set(_cacheKey, matches);
+                if (success) console.log('BET365 - DATA STORED IN CACHE');
+            }
+            return matches;
+        })
+        .catch((error) => {
+            console.log(error);
+            return [];
+        })
 }
 
 async function extractMarkets(browser, marketType, resolve, reject) {
@@ -93,29 +162,40 @@ async function extractMarkets(browser, marketType, resolve, reject) {
         const url = getUrl(marketType);
         console.time(`navigating to url ${url}`);
         await page.goto(url, {
-            timeout: config.BROWSER.WAIT_TIMEOUT,
+            timeout: 30000,
             waitUntil: ['domcontentloaded', 'networkidle2', 'load']
         });
         console.timeEnd(`navigating to url ${url}`);
         const contentDivsSelector = 'div.gl-MarketGroupContainer.gl-MarketGroupContainer_HasLabels > div';
-        // const bettingSuspendedSelector = 'div.cl-BettingSuspendedScreen ';
-        console.time('starting wait...');
+        const bettingSuspendedSelector = 'div.cl-BettingSuspendedScreen ';
+        console.time('page load wait...');
         const waitOptions = { timeout: config.BROWSER.WAIT_TIMEOUT, visible: true };
-        try {
+        try { // check for suspended message
+            const suspendMessageDivCount = await page.$$eval(bettingSuspendedSelector, (elements) => {
+                return elements && elements.length;
+            });
+            console.log(`suspended message count is : ${suspendMessageDivCount}`);
+            if (suspendMessageDivCount === 1) {
+                console.log('Bet 365 markets suspended...');
+                console.timeEnd('page load wait...');
+                return resolve([]);
+            }
             await page.waitForSelector(contentDivsSelector, waitOptions);
         } catch (error) {
+            // await page.screenshot({ fullpage: true, path: './bet365.png'});
             console.log(JSON.stringify(error));
         }
         let retryCount = 0;
         let divsCount = 0;
         while (retryCount < 3 && divsCount === 0) {
+            console.log(`waiting... retry count is : ${retryCount}`);
             await sleep(250);
             divsCount = await page.$$eval(contentDivsSelector, (elements) => {
                 return elements && elements.length;
             });
             retryCount++;
         }
-        console.timeEnd('starting wait...');
+        console.timeEnd('page load wait...');
         console.log(`page returned ${divsCount} number of divs`);
 
         const html = await page.content();

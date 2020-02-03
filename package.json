@@ -7,7 +7,9 @@
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint --ignore-path .gitignore --ext .js .",
-    "lint:fix": "eslint --ignore-path .gitignore --fix --ext .js ."
+    "lint:fix": "eslint --ignore-path .gitignore --fix --ext .js .",
+    "deploy": "docker build -t cbelogu/gaphunters:fix . && docker push cbelogu/gaphunters:fix",
+    "deploy:points": "docker build -t cbelogu/gaphunters:points . && docker push cbelogu/gaphunters:points"
   },
   "engines": {
     "node": "12.13.1"

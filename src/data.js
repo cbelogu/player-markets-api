@@ -3,6 +3,7 @@ const { getMatches, getSportsBetMarketUrlAndPropName } = require('./sportsbet/pr
 const { PlayerMarket } = require('./sportsbet/models/playerMarket');
 const { getPlayerProps } = require('./beteasy/processor');
 const { getPlayerMarkets } = require('./ladbrokes/processor');
+const { pointsBetMarkets } = require('./pointsBet/processor');
 const bet365 = require('./bet365/processor');
 const _ = require('lodash');
 const { closeBrowser } = require('./client/browser');
@@ -24,25 +25,23 @@ function getPlayerMarket(eventId, eventName, marketType) {
     // MarketType 1 = Player Points; 2 = Rebounds; 3 = Assists
     const { sportsBetUrl, marketName } = getSportsBetMarketUrlAndPropName(eventId, marketType);
     console.log(`sports bet markets url is : ${sportsBetUrl}`);
-    // const requestPool = [
-    //     get(sportsBetUrl), // sportsbet API
-    //     bet365.getPlayerMarkets(eventName, marketType), // bet 365 browser
-    //     getPlayerProps(eventName, marketType), // bet easy API
-    //     getPlayerMarkets(eventName, marketType) // ladbrokes BROWSER
-    // ];
     const responseArray = [];
     return get(sportsBetUrl)
-        .then((response) => {
-            responseArray.push(response);
-            return getPlayerProps(eventName, marketType);
-        })
         .then((response) => {
             responseArray.push(response);
             return getPlayerMarkets(eventName, marketType);
         })
         .then((response) => {
             responseArray.push(response);
+            return getPlayerProps(eventName, marketType);
+        })
+        .then((response) => {
+            responseArray.push(response);
             return bet365.getPlayerMarkets(eventName, marketType);
+        })
+        .then((response) => {
+            responseArray.push(response);
+            return pointsBetMarkets(eventName, marketType);
         })
         .then((response) => {
             responseArray.push(response);
@@ -60,24 +59,23 @@ function getPlayerMarket(eventId, eventName, marketType) {
                     }
                 }
             }
-
-            // process bet easy response
-            const betEasyProps = response[1];
-            for (let index = 0; index < betEasyProps.length; index++) {
-                const prop = betEasyProps[index];
-                let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
-                if (finalProp) {
-                    finalProp.betEasySelections = prop;
-                }
-            }
-
             // process ladbrokes response
-            const ladbrokesResponse = response[2];
+            const ladbrokesResponse = response[1];
             for (let index = 0; index < ladbrokesResponse.length; index++) {
                 const prop = ladbrokesResponse[index];
                 let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
                 if (finalProp) {
                     finalProp.ladbrokesSelections = prop;
+                }
+            }
+
+            // process bet easy response
+            const betEasyProps = response[2];
+            for (let index = 0; index < betEasyProps.length; index++) {
+                const prop = betEasyProps[index];
+                let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
+                if (finalProp) {
+                    finalProp.betEasySelections = prop;
                 }
             }
 
@@ -91,7 +89,18 @@ function getPlayerMarket(eventId, eventName, marketType) {
                     finalProp.bet365Selections = prop;
                 }
             }
-            calculateValueProps(markets);
+
+            // process pointsbet response
+            const pointsBetResponse = response[4];
+            for (let index = 0; index < pointsBetResponse.length; index++) {
+                const prop = pointsBetResponse[index];
+                let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
+                if (finalProp) {
+                    finalProp.pointsBetSelections = prop;
+                }
+            }
+            
+            calculateValueProps(markets, marketType);
             // return final markets
             return markets;
         })
@@ -102,7 +111,8 @@ function getPlayerMarket(eventId, eventName, marketType) {
         });
 }
 
-function calculateValueProps(markets) {
+function calculateValueProps(markets, marketType) {
+    const gapValue = (marketType === 1 || marketType === 4) ? 1 : 0;
     try {
         if (markets && markets.length > 0) {
             for (let index = 0; index < markets.length; index++) {
@@ -112,10 +122,11 @@ function calculateValueProps(markets) {
                     market.betEasySelections ? Number(market.betEasySelections.handiCap) : 0,
                     market.ladbrokesSelections ? Number(market.ladbrokesSelections.handiCap) : 0,
                     market.bet365Selections ? Number(market.bet365Selections.handiCap) : 0,
+                    market.pointsBetSelections ? Number(market.pointsBetSelections.handiCap) : 0,
                 ];
                 const unique = [... new Set(handiCaps.filter(n => n > 0).sort())];
                 console.log(`sorted unique handicaps.... ${unique}`);
-                if (unique.length > 1 && ((unique[unique.length - 1] - unique[0]) > 1)) {
+                if (unique.length > 1 && ((unique[unique.length - 1] - unique[0]) > gapValue)) {
                     console.log(`setting value prop to true for ${market.playerName}`);
                     market.valueProp = true;
                 }

@@ -55,6 +55,8 @@ function getMarketParams(marketType) {
             return { name: 'player rebounds markets', propName: 'Player Rebounds O/U', type: 'Rebounds' };
         case 3:
             return { name: 'player assists markets', propName: 'Player Assists O/U', type: 'Assists' };
+        case 4:
+            return { name: 'player performance markets', propName: 'Player Points, Rebounds & Assists O/U', type: 'PRA' };
         default:
             throw new Error(`marketType should be 1 or 2 or 3. Invalid value passed: ${marketType}`);
     }
@@ -124,7 +126,7 @@ async function extractMarkets(browser, url, marketType, matchName, resolve, reje
         });
         const marketsSelector = 'div.accordion__title.accordion-markets__title>h3>span';
 
-        for (let propType = 1; propType <= 3; propType++) {
+        for (let propType = 1; propType <= 4; propType++) {
             const { name, propName, type } = getMarketParams(propType);
             await page.$$eval(marketsSelector, (elements, _name) => {
                 console.log('lol....' + _name);

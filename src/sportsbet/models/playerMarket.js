@@ -6,8 +6,8 @@ class PlayerMarket {
         this.sportsBetSelections = {
             playerName: this.playerName,
             handiCap: args.selections[0].unformattedHandicap,
-            overPrice: args.selections[0].price.winPrice,
-            underPrice: args.selections[1].price.winPrice
+            overPrice: Number(args.selections[0].price.winPrice).toFixed(2),
+            underPrice: Number(args.selections[1].price.winPrice).toFixed(2)
         };
     }
 }
