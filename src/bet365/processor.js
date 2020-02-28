@@ -105,27 +105,29 @@ function getUrl(marketType, useApiForData = false) {
 }
 
 async function getDataUsingApi(marketType) {
+    let cookie = await getBrowserCookie();
     return get(getUrl(marketType, true),
         {
             headers:
             {
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
-                'Cookie': 'rmbs=3; aps03=cf=N&cg=1&cst=0&ct=13&hd=N&lng=30&oty=2&tzi=30; session=processform=0; pstk=915D9045DFA1F14385B74BFE5CC43E8C000003'
+                'Cookie': cookie
             }
         })
         .then((response) => {
             const matches = [];
-            const data = response.data.split('SY=cbn;NA=');
+            const data = response.data.split(marketType === 4 ? 'SY=cw;NA=' : 'SY=cbn;NA=');
             if (data && data.length && data.length === 1) {
                 console.log('markets not open yet');
                 return matches;
             }
             data.shift(); // removes the first element which is an array
+            const splitter = marketType === 4 ? ';HA=' : ';NA=';
             for (let index = 0; index < data.length; index++) {
                 const matchData = data[index].split('CN=1;FF=;');
                 const matchName = matchData[0].split(';')[0];
                 const playersList = matchData[1].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
-                const overOdds = matchData[2].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
+                const overOdds = matchData[2].split(splitter).slice(1, -1).map(item => item.split(';')[0]);
 
                 const match = {
                     matchName,
@@ -241,6 +243,28 @@ async function extractMarkets(browser, marketType, resolve, reject) {
     } catch (error) {
         console.log(`error while fetching bet 365 markets... ${JSON.stringify(error)}`);
         return reject(error);
+    }
+}
+
+async function getBrowserCookie() {
+    return getBrowser()
+        .then((browser) => {
+            return new Promise((resolve, reject) => {
+                getCookie(browser, resolve, reject);
+            });
+        })
+
+    async function getCookie(browser, resolve, reject) {
+        try {
+            const page = await browser.newPage();
+            await page.emulate(iphoneX);
+            await page.goto(`https://bet365.com.au`);
+            await sleep(500);
+            const cookies = await page.cookies();
+            return resolve(`rmbs=3; aps03=${cookies[1].value}; session=processform=0; pstk=${cookies[0].value}`);
+        } catch (error) {
+            return resolve('');
+        }
     }
 }
 

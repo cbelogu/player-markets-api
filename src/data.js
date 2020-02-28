@@ -129,6 +129,9 @@ function calculateValueProps(markets, marketType) {
                 if (unique.length > 1 && ((unique[unique.length - 1] - unique[0]) > gapValue)) {
                     console.log(`setting value prop to true for ${market.playerName}`);
                     market.valueProp = true;
+                    if ((unique[unique.length - 1] - unique[0]) > gapValue + 1) {
+                        market.gapHuntersDream = true;
+                    }
                 }
             }
         }

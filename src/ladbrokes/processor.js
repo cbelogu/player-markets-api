@@ -150,8 +150,9 @@ async function extractMarkets(browser, url, marketType, matchName, resolve, reje
             let data = await page.$$eval('div.accordion__content.accordion-content-container.accordion-markets-nested__content.expanded', (elements, _type) => {
                 let data = [];
                 for (let index = 0; index < elements.length; index++) {
-                    const text = elements[index].textContent;
+                    let text = elements[index].textContent;
                     if (text.includes('Over') && text.includes(_type)) {
+                        text = text.replace('Bets on this market are not eligible for any goodwill refund as a result of injury.   \n', '');
                         data.push(text);
                     }
                 }
