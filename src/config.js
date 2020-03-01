@@ -33,8 +33,8 @@ const config = {
     API_PLAYER_ASSISTS_URL: 'https://www.bet365.com.au/SportsBook.API/web?lid=30&zid=0&pd=%23AC%23B18%23C20604387%23D43%23E181379%23F43%23&cid=13&ctid=13',
     API_PLAYER_PRA: 'https://mobile.bet365.com.au/SportsBook.API/Mobile?lid=30&zid=0&pd=%23AC%23B18%23C20604387%23D43%23E181390%23F43%23&cid=13&ctid=13',
     CACHEKEY: 'Bet365Markets_',
-    USEAPICALL: true,
-    ENABLE_BET365: true,
+    USEAPICALL: false,
+    ENABLE_BET365: false,
   },
   POINTSBET: {
     NBA_MATCHES_URL: 'https://api.pointsbet.com/api/v2/competitions/7176/events/featured?includeLive=true',

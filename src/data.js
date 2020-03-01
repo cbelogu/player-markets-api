@@ -124,7 +124,7 @@ function calculateValueProps(markets, marketType) {
                     market.bet365Selections ? Number(market.bet365Selections.handiCap) : 0,
                     market.pointsBetSelections ? Number(market.pointsBetSelections.handiCap) : 0,
                 ];
-                const unique = [... new Set(handiCaps.filter(n => n > 0).sort())];
+                const unique = [... new Set(handiCaps.filter(n => n > 0).sort((a, b) => a - b))];
                 console.log(`sorted unique handicaps.... ${unique}`);
                 if (unique.length > 1 && ((unique[unique.length - 1] - unique[0]) > gapValue)) {
                     console.log(`setting value prop to true for ${market.playerName}`);
