@@ -102,14 +102,27 @@ function extractMarketsFromResponse(data, marketType) {
     for (let index = 0; index < data.length; index++) {
         const market = data[index];
         const props = market.trim().split('\n');
-        const playerName = props[0].split('Over')[0].trim();
-        const handiCap = props[0].split('Over')[1].trim().replace(` ${type}`, '').trim();
-        const playerMarket = {
-            playerName,
-            handiCap,
-            overPrice: props[1].trim(),
-            underPrice: props[3].trim()
-        };
+        const isOverMarket = props[0].includes('Over');
+        let playerMarket;
+        if (isOverMarket) {
+            const playerName = props[0].split('Over')[0].trim();
+            const handiCap = props[0].split('Over')[1].trim().replace(` ${type}`, '').trim();
+            playerMarket = {
+                playerName,
+                handiCap,
+                overPrice: props[1].trim(),
+                underPrice: props[3].trim()
+            };
+        } else {
+            const playerName = props[0].split('Under')[0].trim();
+            const handiCap = props[0].split('Under')[1].trim().replace(` ${type}`, '').trim();
+            playerMarket = {
+                playerName,
+                handiCap,
+                overPrice: props[3].trim(),
+                underPrice: props[1].trim()
+            };
+        }
         playerMarkets.push(playerMarket);
     }
     console.log(`Ladbrokes markets FORMATTED IS: ${JSON.stringify(playerMarkets)}`);
