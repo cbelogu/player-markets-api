@@ -3,11 +3,13 @@ const { getMatches, getSportsBetMarketUrlAndPropName } = require('./sportsbet/pr
 const { PlayerMarket } = require('./sportsbet/models/playerMarket');
 const { getPlayerProps } = require('./beteasy/processor');
 const { getPlayerMarkets } = require('./ladbrokes/api-processor');
+const { getPlayerMarkets: palmerbetPlayerMarkets } = require('./palmerbet/api-processor');
 const { pointsBetMarkets } = require('./pointsBet/processor');
 const bet365 = require('./bet365/processor');
 const _ = require('lodash');
 const { closeBrowser } = require('./client/browser');
 const _cache = require('./client/cacheManager').cacheManager;
+const { response } = require('express');
 
 function getAvailableMatches() {
     return getMatches()
@@ -45,6 +47,10 @@ function getPlayerMarket(eventId, eventName, marketType) {
         .then((response) => {
             responseArray.push(response);
             return pointsBetMarkets(eventName, marketType);
+        })
+        .then((response) => {
+            responseArray.push(response);
+            return palmerbetPlayerMarkets(eventName, marketType);
         })
         .then((response) => {
             responseArray.push(response);
@@ -103,6 +109,15 @@ function getPlayerMarket(eventId, eventName, marketType) {
                 }
             }
             
+            // process palmer bet response
+            const palmerBetResponse = response[5];
+            for(let index = 0; index < palmerBetResponse.length; index++) {
+                const prop = palmerBetResponse[index];
+                let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
+                if (finalProp) {
+                    finalProp.palmerBetSelections = prop;
+                }
+            }
             calculateValueProps(markets, marketType);
             // return final markets
             return markets;
@@ -126,6 +141,7 @@ function calculateValueProps(markets, marketType) {
                     market.ladbrokesSelections ? Number(market.ladbrokesSelections.handiCap) : 0,
                     market.bet365Selections ? Number(market.bet365Selections.handiCap) : 0,
                     market.pointsBetSelections ? Number(market.pointsBetSelections.handiCap) : 0,
+                    market.palmerBetSelections ? Number(market.palmerBetSelections.handiCap) : 0
                 ];
                 const unique = [... new Set(handiCaps.filter(n => n > 0).sort((a, b) => a - b))];
                 console.log(`sorted unique handicaps.... ${unique}`);

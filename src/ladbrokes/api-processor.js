@@ -76,11 +76,12 @@ async function getPlayerMarkets(eventName, marketType) {
   markets.forEach((market) => {
     const entrant1 = eventCard.entrants[market.entrant_ids[0]];
     const isOverMarket = entrant1.name.includes('Over');
+    const delimiter = isOverMarket ? 'Over' : 'Under';
     const overEntrantId = isOverMarket ? market.entrant_ids[0] : market.entrant_ids[1];
     const underEntrantId = isOverMarket ? market.entrant_ids[1] : market.entrant_ids[0];
     
-    const playerName = entrant1.name.split('Over')[0].trim();
-    const handiCap = entrant1.name.split('Over')[1].trim().replace(` ${marketGroupingName.type}`, '').trim();
+    const playerName = entrant1.name.split(delimiter)[0].trim();
+    const handiCap = entrant1.name.split(delimiter)[1].trim().replace(` ${marketGroupingName.type}`, '').trim();
     const overOdds = eventCard.prices[Object.keys(eventCard.prices).filter(key => key.startsWith(overEntrantId))].odds;
     const underOddss = eventCard.prices[Object.keys(eventCard.prices).filter(key => key.startsWith(underEntrantId))].odds;
     
