@@ -1,4 +1,5 @@
-const devices = require('puppeteer/DeviceDescriptors');
+const puppeteer = require('puppeteer');
+const devices = puppeteer.devices;
 const iphoneX = devices['iPhone X'];
 const _cache = require('../client/cacheManager').cacheManager;
 const { config } = require('../config');
@@ -7,7 +8,7 @@ const { getBrowser } = require('../client/browser');
 
 async function getMatchUrl(matchName) {
     const namesArray = matchName.split(' At ');
-    const formattedName = String(namesArray[1] + ' v ' + namesArray[0]).replace(/\s/g, '-').replace('76ers', '76-ers').toLowerCase();
+    const formattedName = String(namesArray[1] + ' vs ' + namesArray[0]).replace(/\s/g, '-').replace('76ers', '76-ers').toLowerCase();
     console.log(formattedName);
     const cachedData = _cache.get(config.LADBROKES.CACHEKEY_NBA_MATCHES_URL);
     if (cachedData) return Promise.resolve(cachedData.find((e) => e.includes(formattedName)));

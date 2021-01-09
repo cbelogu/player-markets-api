@@ -6,11 +6,11 @@ app.use(cors());
 // export NODE_OPTIONS=--http-parser=legacy
 const PORT = 1234;
 
-app.get('/', (req, res) => {
+app.get('/api/', (req, res) => {
   res.send('all is well');
 });
 
-app.get('/events', (req, res) => {
+app.get('/api/events', (req, res) => {
   dataService.getAvailableMatches()
     .then((data) => {
       res.send(data);
@@ -20,7 +20,7 @@ app.get('/events', (req, res) => {
     });
 });
 
-app.get('/event/:id/:name/:betType', (req, res) => {
+app.get('/api/event/:id/:name/:betType', (req, res) => {
   const { id, name } = req.params;
   const marketType = parseInt(req.params.betType);
   dataService.getPlayerMarketsForEvent(id, name, marketType)
@@ -32,7 +32,7 @@ app.get('/event/:id/:name/:betType', (req, res) => {
     });
 });
 
-app.get('/events/bet365', (req, res) => {
+app.get('/api/events/bet365', (req, res) => {
   dataService.cacheBet365Markets()
     .then((data) => {
       res.send(data);
@@ -42,12 +42,12 @@ app.get('/events/bet365', (req, res) => {
     });
 });
 
-app.put('/events/flushCache', (req, res) => {
+app.put('/api/events/flushCache', (req, res) => {
   dataService.flushCache();
   res.send();
 });
 
-app.put('/events/populateCache', (req, res) => {
+app.put('/api/events/populateCache', (req, res) => {
   try {
     dataService.flushCache();
     dataService.getAvailableMatches()

@@ -9,7 +9,7 @@
     "lint": "eslint --ignore-path .gitignore --ext .js .",
     "lint:fix": "eslint --ignore-path .gitignore --fix --ext .js .",
     "deploy": "docker build -t cbelogu/gaphunters:fix . && docker push cbelogu/gaphunters:fix",
-    "deploy:points": "docker build -t cbelogu/gaphunters:points . && docker push cbelogu/gaphunters:points"
+    "deploy:sgmfix": "docker build -t cbelogu/gaphunters:sgmfix . && docker push cbelogu/gaphunters:sgmfix"
   },
   "engines": {
     "node": "12.13.1"
@@ -18,23 +18,26 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.0",
+    "axios": "^0.19.2",
+    "axios-cookiejar-support": "^1.0.1",
     "cheerio": "^1.0.0-rc.3",
     "cors": "^2.8.5",
     "express": "^4.17.1",
-    "lodash": "^4.17.15",
-    "node-cache": "^5.1.0",
-    "puppeteer": "^2.0.0",
-    "request": "^2.88.0",
-    "request-promise": "^4.2.5"
+    "got": "^11.8.1",
+    "lodash": "^4.17.19",
+    "node-cache": "^5.1.2",
+    "puppeteer": "^5.2.1",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
-    "eslint": "^6.1.0",
-    "eslint-config-airbnb": "^18.0.1",
-    "eslint-config-airbnb-base": "^14.0.0",
-    "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-jsx-a11y": "^6.2.3",
-    "eslint-plugin-react": "^7.16.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-react": "^7.20.5",
     "eslint-plugin-react-hooks": "^1.7.0"
   }
 }

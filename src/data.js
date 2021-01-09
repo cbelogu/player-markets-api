@@ -2,7 +2,7 @@ const { get } = require('./client/httpClient');
 const { getMatches, getSportsBetMarketUrlAndPropName } = require('./sportsbet/processor.js');
 const { PlayerMarket } = require('./sportsbet/models/playerMarket');
 const { getPlayerProps } = require('./beteasy/processor');
-const { getPlayerMarkets } = require('./ladbrokes/processor');
+const { getPlayerMarkets } = require('./ladbrokes/api-processor');
 const { pointsBetMarkets } = require('./pointsBet/processor');
 const bet365 = require('./bet365/processor');
 const _ = require('lodash');
@@ -29,15 +29,18 @@ function getPlayerMarket(eventId, eventName, marketType) {
     return get(sportsBetUrl)
         .then((response) => {
             responseArray.push(response);
+            // return [];
             return getPlayerMarkets(eventName, marketType);
         })
         .then((response) => {
             responseArray.push(response);
-            return getPlayerProps(eventName, marketType);
+            // return getPlayerProps(eventName, marketType);
+            return [];
         })
         .then((response) => {
             responseArray.push(response);
-            return bet365.getPlayerMarkets(eventName, marketType);
+            return [];
+            // return bet365.getPlayerMarkets(eventName, marketType);
         })
         .then((response) => {
             responseArray.push(response);
@@ -106,8 +109,8 @@ function getPlayerMarket(eventId, eventName, marketType) {
         })
         .catch()
         .finally(() => {
-            console.log('closing browser...');
-            closeBrowser();
+            // console.log('closing browser...');
+            // closeBrowser();
         });
 }
 

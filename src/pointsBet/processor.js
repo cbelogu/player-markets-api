@@ -36,7 +36,7 @@ const getMatchUrls = async (matchName) => {
 }
 
 function getMarketName(marketType) {
-  let propName = 0;
+  let propName = '';
   switch (marketType) {
     case 1:
       propName = config.POINTSBET.PLAYER_POINTS;
@@ -80,17 +80,18 @@ async function pointsBetMarkets(matchName, marketType) {
 function extractPointsBetMarkets(marketType, matchData, data) {
   try {
     if (data && data.fixedOddsMarkets && data.fixedOddsMarkets.length > 0) {
+      const regex = getMarketName(marketType);
       const markets = data.fixedOddsMarkets
-        .find(item => item.name.startsWith(getMarketName(marketType)));
-      if (markets && markets.outcomes && markets.outcomes.length > 0) {
+        .filter(item => regex.test(item.name));
+      if (markets && markets.length > 0) {
         const playerMarkets = [];
-        for (let index = 0; index < markets.outcomes.length; index = index + 2) {
-          const nameAndHandiCap = markets.outcomes[index].name.split(' Over ');
+        for (let index = 0; index < markets.length; index++) {
+          const nameAndHandiCap = markets[index].outcomes[0].name.split(' Over ');
           const playerMarket = {
             playerName: nameAndHandiCap[0],
             handiCap: nameAndHandiCap[1],
-            overPrice: markets.outcomes[index].price,
-            underPrice: markets.outcomes[index + 1].price
+            overPrice: markets[index].outcomes[0].price,
+            underPrice: markets[index].outcomes[1].price
           };
           playerMarkets.push(playerMarket);
         }
@@ -101,6 +102,7 @@ function extractPointsBetMarkets(marketType, matchData, data) {
       }
       return [];
     }
+    return [];
   } catch (error) {
     return [];
   }

@@ -1,10 +1,12 @@
-const devices = require('puppeteer/DeviceDescriptors');
+const puppeteer = require('puppeteer');
+const devices = puppeteer.devices;
 const iphoneX = devices['iPhone X'];
 const _cache = require('../client/cacheManager').cacheManager;
 const { config } = require('../config');
 const $ = require('cheerio');
 const { getBrowser } = require('../client/browser');
 const { get } = require('../client/httpClient');
+const { request } = require('./bet365ApiClient');
 
 let _cacheKey = '';
 const teamNameMappings = {
@@ -104,57 +106,170 @@ function getUrl(marketType, useApiForData = false) {
     }
 }
 
+function formatData(data) {
+    const rawMessage = data;
+    var split, glit = [];
+    var splitArr = rawMessage.split('|')
+    splitArr = splitArr.sort();
+    for (split of splitArr) {
+        //console.log(split)
+        var PA = split.indexOf('PA');
+        var MA = split.indexOf('MA');
+        var CL = split.indexOf('CL');
+        var MG = split.indexOf('MG');
+        var EV = split.indexOf('EV');
+
+        if (EV == 0) {
+            try {
+                var obj = split.replace(/EV;/gi, '{ "type":"getEvent","data":{"').replace(/=/gi, `":"`).replace(/;/gi, `","`).slice(0, -2) + '} }'
+                glit.push(JSON.parse(obj))
+            } catch (e) {
+                var obj = { error: 'Erro' }
+            }
+        }
+
+        if (PA == 0) {
+            try {
+                var obj = split.replace(/PA;/gi, '{ "type":"eventPlay","data":{"').replace(/=/gi, `":"`).replace(/;/gi, `","`).slice(0, -2) + '} }'
+                glit.push(JSON.parse(obj))
+            } catch (e) {
+                var obj = { error: 'Erro' }
+            }
+        }
+
+        if (MA == 0) {
+            try {
+                var obj = split.replace(/MA;/gi, '{ "type":"eventMatch","data":{"').replace(/=/gi, `":"`).replace(/;/gi, `","`).slice(0, -2) + '} }'
+                glit.push(JSON.parse(obj))
+            } catch (e) {
+                var obj = { error: 'Erro' }
+            }
+        }
+
+        if (CL == 0) {
+            try {
+                var obj = split.replace(/CL;/gi, '{ "type":"clain","data":{"').replace(/=/gi, `":"`).replace(/;/gi, `","`).slice(0, -2) + '} }'
+                glit.push(JSON.parse(obj))
+            } catch (e) {
+                var obj = { error: 'Erro' }
+            }
+        }
+
+        if (MG == 0) {
+            try {
+                var obj = split.replace(/MG;/gi, '{ "type":"magic","data":{"').replace(/=/gi, `":"`).replace(/;/gi, `","`).slice(0, -2) + '} }'
+                glit.push(JSON.parse(obj))
+            } catch (e) {
+                var obj = { error: 'Erro' }
+            }
+        }
+    }
+
+    return glit;
+}
+
 async function getDataUsingApi(marketType) {
-    let cookie = await getBrowserCookie();
-    return get(getUrl(marketType, true),
-        {
-            headers:
-            {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
-                'Cookie': cookie
-            }
-        })
-        .then((response) => {
-            const matches = [];
-            const data = response.data.split(marketType === 4 ? 'SY=cw;NA=' : 'SY=cbn;NA=');
-            if (data && data.length && data.length === 1) {
-                console.log('markets not open yet');
-                return matches;
-            }
-            data.shift(); // removes the first element which is an array
-            const splitter = marketType === 4 ? ';HA=' : ';NA=';
-            for (let index = 0; index < data.length; index++) {
-                const matchData = data[index].split('CN=1;FF=;');
-                const matchName = matchData[0].split(';')[0];
-                const playersList = matchData[1].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
-                const overOdds = matchData[2].split(splitter).slice(1, -1).map(item => item.split(';')[0]);
-
-                const match = {
-                    matchName,
-                    players: playersList.map((player, index) => ({
-                        playerName: player,
-                        handiCap: overOdds[index],
-                        overPrice: 1.00,
-                        underPrice: 1.00
-                    }))
-                };
-
-                matches.push(match);
-            }
-
-            // store the data in cache
-            console.log('BET365 Matches Array ' + JSON.stringify(matches));
-            if (matches.length > 0) {
-                console.log('BET365 - STORING DATA IN CACHE');
-                const success = _cache.set(_cacheKey, matches);
-                if (success) console.log('BET365 - DATA STORED IN CACHE');
-            }
+    return request(getUrl(marketType, true)).then((response) => {
+        const formattedResponse = formatData(response.data);
+        const matches = [];
+        const data = response.data.split(marketType === 4 ? 'SY=cw;NA=' : 'SY=fe;NA=');
+        if (data && data.length && data.length === 1) {
+            console.log('markets not open yet');
             return matches;
-        })
-        .catch((error) => {
-            console.log(error);
-            return [];
-        })
+        }
+        data.shift(); // removes the first element which is an array
+        const splitter = marketType === 4 ? ';HA=' : ';NA=';
+        for (let index = 0; index < data.length; index++) {
+            const matchData = data[index].split('CN=1;FF=;');
+            const matchName = matchData[0].split(';')[0];
+            const playersList = matchData[1].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
+            const overOdds = matchData[2].split(splitter).slice(1, -1).map(item => item.split(';')[0]);
+
+            const match = {
+                matchName,
+                players: playersList.map((player, index) => ({
+                    playerName: player,
+                    handiCap: overOdds[index],
+                    overPrice: 1.00,
+                    underPrice: 1.00
+                }))
+            };
+
+            matches.push(match);
+        }
+
+        // store the data in cache
+        console.log('BET365 Matches Array ' + JSON.stringify(matches));
+        if (matches.length > 0) {
+            console.log('BET365 - STORING DATA IN CACHE');
+            const success = _cache.set(_cacheKey, matches);
+            if (success) console.log('BET365 - DATA STORED IN CACHE');
+        }
+        return matches;
+    }).catch(console.log);
+    // let cookie = await getBrowserCookie();
+    // return get(getUrl(marketType, true), {
+    //     headers: {
+    //         'Accept': '*/*',
+    //         'X-Requested-With': 'XMLHttpRequest',
+    //         'Accept-Encoding': 'gzip, deflate, br',
+    //         'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    //         'Cache-Control': 'no-cache',
+    //         'Connection': 'keep-alive',
+    //         'Content-Length': 178,
+    //         'Content-type': 'application/x-www-form-urlencoded',
+    //         'Host': 'www.bet365.com.au',
+    //         'Origin': 'https://www.bet365.com',
+    //         'Pragma': 'no-cache',
+    //         'Referer': 'https://www.bet365.com.au/',
+    //         'Sec-Fetch-Dest': 'empty',
+    //         'Sec-Fetch-Mode': 'cors',
+    //         'Sec-Fetch-Site': 'same-site',
+    //         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
+    //     }
+    // })
+    //     .then((response) => {
+    //         console.log(response);
+    //         const matches = [];
+    //         const data = response.data.split(marketType === 4 ? 'SY=cw;NA=' : 'SY=cbn;NA=');
+    //         if (data && data.length && data.length === 1) {
+    //             console.log('markets not open yet');
+    //             return matches;
+    //         }
+    //         data.shift(); // removes the first element which is an array
+    //         const splitter = marketType === 4 ? ';HA=' : ';NA=';
+    //         for (let index = 0; index < data.length; index++) {
+    //             const matchData = data[index].split('CN=1;FF=;');
+    //             const matchName = matchData[0].split(';')[0];
+    //             const playersList = matchData[1].split(';NA=').slice(1, -1).map(item => item.split(';')[0]);
+    //             const overOdds = matchData[2].split(splitter).slice(1, -1).map(item => item.split(';')[0]);
+
+    //             const match = {
+    //                 matchName,
+    //                 players: playersList.map((player, index) => ({
+    //                     playerName: player,
+    //                     handiCap: overOdds[index],
+    //                     overPrice: 1.00,
+    //                     underPrice: 1.00
+    //                 }))
+    //             };
+
+    //             matches.push(match);
+    //         }
+
+    //         // store the data in cache
+    //         console.log('BET365 Matches Array ' + JSON.stringify(matches));
+    //         if (matches.length > 0) {
+    //             console.log('BET365 - STORING DATA IN CACHE');
+    //             const success = _cache.set(_cacheKey, matches);
+    //             if (success) console.log('BET365 - DATA STORED IN CACHE');
+    //         }
+    //         return matches;
+    //     })
+    //     .catch((error) => {
+    //         console.log(error);
+    //         return [];
+    //     })
 }
 
 async function extractMarkets(browser, marketType, resolve, reject) {
