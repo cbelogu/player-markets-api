@@ -9,7 +9,7 @@
     "lint": "eslint --ignore-path .gitignore --ext .js .",
     "lint:fix": "eslint --ignore-path .gitignore --fix --ext .js .",
     "deploy": "docker build -t cbelogu/gaphunters:fix . && docker push cbelogu/gaphunters:fix",
-    "deploy:palmer": "docker build -t cbelogu/gaphunters:palmer . && docker push cbelogu/gaphunters:palmer"
+    "deploy:remote": "docker build -t cbelogu/gaphunters:unibet . && docker push cbelogu/gaphunters:unibet"
   },
   "engines": {
     "node": "12.13.1"

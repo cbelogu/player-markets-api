@@ -16,7 +16,7 @@ async function getMatchId(matchName) {
     if (match) return Promise.resolve(match.eventId);
     return Promise.resolve(null);
   } catch (error) {
-    console.log(error);
+    console.log(`PALMER - Error getting eventid ${error}`);
     return Promise.resolve(null);
   }
 }
@@ -47,7 +47,7 @@ async function getOffers(eventId, marketType) {
     const offers = markets.filter((market) => market.tags.length === 0 && market.title.includes(marketName));
     return offers;
   } catch (error) {
-    console.log(error);
+    console.log(`PALMER - Error getting offers ${error}`);
     return Promise.resolve([]);
   }
 }
@@ -74,7 +74,7 @@ async function getOdds(offers, marketType) {
     }));
     return response;
   } catch (error) {
-    console.log(error);
+    console.log(`PALMER - Error extracting odds ${error}`);
     return Promise.resolve([]);
   }
 }

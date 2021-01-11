@@ -26,6 +26,7 @@ const getMatchUrls = async (matchName) => {
         }
         return Promise.resolve(null);
       } catch (error) {
+        console.log(`POINTSBET - Error getting match urls ${error}`);
         return Promise.resolve(null);
       }
     })
@@ -104,6 +105,7 @@ function extractPointsBetMarkets(marketType, matchData, data) {
     }
     return [];
   } catch (error) {
+    console.log(`POINTSBET - Error extracting markets ${error}`);
     return [];
   }
 }

@@ -10,7 +10,8 @@ function getMatches() {
         // eslint-disable-next-line no-plusplus
         for (let index = 0; index < response.data.events.length; index++) {
           const event = response.data.events[index];
-          if (event.bettingStatus === 'PRICED') {
+          const excludeEvents = ["Division", "Conference", "Championship"];
+          if (event.bettingStatus === 'PRICED' && !excludeEvents.some(prohibited => event.name.includes(prohibited))) {
             events.push(new NbaMatch(event));
           }
         }

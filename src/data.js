@@ -1,15 +1,14 @@
 const { get } = require('./client/httpClient');
 const { getMatches, getSportsBetMarketUrlAndPropName } = require('./sportsbet/processor.js');
 const { PlayerMarket } = require('./sportsbet/models/playerMarket');
-const { getPlayerProps } = require('./beteasy/processor');
 const { getPlayerMarkets } = require('./ladbrokes/api-processor');
 const { getPlayerMarkets: palmerbetPlayerMarkets } = require('./palmerbet/api-processor');
+const uniBet = require('./unibet/api-processor');
 const { pointsBetMarkets } = require('./pointsBet/processor');
-const bet365 = require('./bet365/processor');
+const bet365 = require('./bet365/bet365ApiClient');
 const _ = require('lodash');
 const { closeBrowser } = require('./client/browser');
 const _cache = require('./client/cacheManager').cacheManager;
-const { response } = require('express');
 
 function getAvailableMatches() {
     return getMatches()
@@ -36,13 +35,12 @@ function getPlayerMarket(eventId, eventName, marketType) {
         })
         .then((response) => {
             responseArray.push(response);
-            // return getPlayerProps(eventName, marketType);
-            return [];
+            return uniBet.getPlayerMarkets(eventName, marketType);
         })
         .then((response) => {
             responseArray.push(response);
-            return [];
             // return bet365.getPlayerMarkets(eventName, marketType);
+            return [];
         })
         .then((response) => {
             responseArray.push(response);
@@ -78,13 +76,13 @@ function getPlayerMarket(eventId, eventName, marketType) {
                 }
             }
 
-            // process bet easy response
-            const betEasyProps = response[2];
-            for (let index = 0; index < betEasyProps.length; index++) {
-                const prop = betEasyProps[index];
+            // process unibet response
+            const unibetProps = response[2];
+            for (let index = 0; index < unibetProps.length; index++) {
+                const prop = unibetProps[index];
                 let finalProp = _.find(markets, (market) => market.playerName.toLowerCase() === prop.playerName.toLowerCase());
                 if (finalProp) {
-                    finalProp.betEasySelections = prop;
+                    finalProp.unibetSelections = prop;
                 }
             }
 
@@ -122,7 +120,9 @@ function getPlayerMarket(eventId, eventName, marketType) {
             // return final markets
             return markets;
         })
-        .catch()
+        .catch(error => {
+            console.log(error);
+        })
         .finally(() => {
             // console.log('closing browser...');
             // closeBrowser();
@@ -169,7 +169,6 @@ async function cacheBet365Markets() {
     }
     return Promise.resolve();
 }
-
 function flushCache() {
     try {
         console.log(`Before flush ... ${JSON.stringify(_cache.getStats())}`);
